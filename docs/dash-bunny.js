@@ -1,7 +1,39 @@
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.11"></script>
+(() => {
+  const HLS_SOURCE = "https://cdn.jsdelivr.net/npm/hls.js@1.6.11";
+  let hlsLoadPromise = null;
 
-<script>
-function initBunnyPlayerBasic() {
+  function ensureHlsLoaded() {
+    if (window.Hls) return Promise.resolve(window.Hls);
+    if (hlsLoadPromise) return hlsLoadPromise;
+
+    hlsLoadPromise = new Promise((resolve) => {
+      const existing = document.querySelector('script[data-hls-autoload]');
+      if (existing) {
+        if (existing.dataset.hlsReady === "true") {
+          resolve(window.Hls || null);
+          return;
+        }
+        existing.addEventListener("load", () => resolve(window.Hls || null), { once: true });
+        existing.addEventListener("error", () => resolve(null), { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = HLS_SOURCE;
+      script.async = true;
+      script.dataset.hlsAutoload = "true";
+      script.addEventListener("load", () => {
+        script.dataset.hlsReady = "true";
+        resolve(window.Hls || null);
+      }, { once: true });
+      script.addEventListener("error", () => resolve(null), { once: true });
+      document.head.appendChild(script);
+    });
+
+    return hlsLoadPromise;
+  }
+
+  function initBunnyPlayerBasic() {
   document.querySelectorAll('[data-bunny-player-init]').forEach(function(player) {
     var src = player.getAttribute('data-player-src');
     if (!src) return;
@@ -469,8 +501,17 @@ function initBunnyPlayerBasic() {
   }
 }
 
-// Initialize Bunny HTML HLS Player (Basic)
-document.addEventListener('DOMContentLoaded', function() {
-  initBunnyPlayerBasic();
-});
-</script>
+  function bootPlayers() {
+    ensureHlsLoaded()
+      .catch(() => null)
+      .then(() => initBunnyPlayerBasic());
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bootPlayers, { once: true });
+  } else {
+    bootPlayers();
+  }
+
+  window.initBunnyPlayerBasic = initBunnyPlayerBasic;
+})();
