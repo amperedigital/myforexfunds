@@ -302,24 +302,44 @@
         scheduleAutoplay();
       });
 
-      scope.querySelectorAll(NEXT_SELECTOR).forEach((btn) => {
-        if (btn.closest(BASE_SCOPE) !== scope) return;
+      function buttonMatchesScope(btn) {
+        const direct = btn.closest(BASE_SCOPE);
+        if (direct) return direct === scope;
+        const targetSelector = btn.getAttribute("data-scroll-target");
+        if (targetSelector) {
+          const targetEl = document.querySelector(targetSelector);
+          if (targetEl) return targetEl === scope;
+        }
+        return false;
+      }
+
+      function collectButtons(selector) {
+        const scoped = Array.from(scope.querySelectorAll(selector));
+        const targeted = Array.from(
+          document.querySelectorAll(`${selector}[data-scroll-target]`)
+        ).filter((btn) => buttonMatchesScope(btn));
+        const set = new Set([...scoped, ...targeted]);
+        return Array.from(set);
+      }
+
+      collectButtons(NEXT_SELECTOR).forEach((btn) => {
+        if (!buttonMatchesScope(btn)) return;
         btn.addEventListener("click", (event) => {
           event.preventDefault();
           goRelative(1);
         });
       });
 
-      scope.querySelectorAll(PREV_SELECTOR).forEach((btn) => {
-        if (btn.closest(BASE_SCOPE) !== scope) return;
+      collectButtons(PREV_SELECTOR).forEach((btn) => {
+        if (!buttonMatchesScope(btn)) return;
         btn.addEventListener("click", (event) => {
           event.preventDefault();
           goRelative(-1);
         });
       });
 
-      scope.querySelectorAll(TO_SELECTOR).forEach((btn) => {
-        if (btn.closest(BASE_SCOPE) !== scope) return;
+      collectButtons(TO_SELECTOR).forEach((btn) => {
+        if (!buttonMatchesScope(btn)) return;
         const targetIndex = clampIndex(btn.dataset.scrollTo, slides.length - 1);
         if (!Number.isFinite(targetIndex)) return;
         btn.addEventListener("click", (event) => {
