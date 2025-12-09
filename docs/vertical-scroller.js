@@ -45,7 +45,9 @@
   function enableNativeScroll(scopes) {
     scopes.forEach((scope) => {
       if (scope.__verticalScrollInit) return;
-      scope.style.overflowY = scope.style.overflowY || "auto";
+      scope.style.setProperty("overflow-y", "auto", "important");
+      scope.style.setProperty("overflow-x", "auto", "important");
+      scope.style.setProperty("overflow", "auto", "important");
       scope.style.touchAction = scope.style.touchAction || "pan-y";
     });
   }
@@ -85,7 +87,11 @@
       const wheelThreshold = toNumber(dataset.scrollWheelThreshold, 10);
       const swipeThreshold = toNumber(dataset.scrollSwipeThreshold, 50);
 
-      scope.style.overflow = scope.style.overflow || "hidden";
+      scope.dataset.scrollOriginalOverflowY ??= scope.style.overflowY || "";
+      scope.dataset.scrollOriginalOverflow ??= scope.style.overflow || "";
+      scope.style.setProperty("overflow-y", "hidden", "important");
+      scope.style.setProperty("overflow-x", "hidden", "important");
+      scope.style.setProperty("overflow", "hidden", "important");
       scope.style.position = scope.style.position || "relative";
       scope.style.touchAction = scope.style.touchAction || "none";
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
