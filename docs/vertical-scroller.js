@@ -318,53 +318,72 @@
         return false;
       }
 
-      function collectButtons(selector) {
-        const scoped = Array.from(scope.querySelectorAll(selector));
-        const targeted = Array.from(document.querySelectorAll(selector)).filter((btn) => {
-          if (scoped.includes(btn)) return false;
-          const target =
-            resolveButtonTarget(
-              btn,
-              selector === NEXT_SELECTOR
-                ? "data-scroll-next"
-                : selector === PREV_SELECTOR
-                ? "data-scroll-prev"
-                : "data-scroll-to"
-            ) || null;
-          return target === scope;
+      const externalButtons = new Set();
+
+      function attachExternalButton(btn, type, payload) {
+        if (externalButtons.has(btn)) return;
+        externalButtons.add(btn);
+        btn.addEventListener("click", (event) => {
+          const resolvedTarget = resolveButtonTarget(btn, type);
+          if (resolvedTarget && resolvedTarget !== scope) return;
+          event.preventDefault();
+          clearAutoplay();
+          if (type === "data-scroll-next") {
+            goRelative(payload || 1);
+          } else if (type === "data-scroll-prev") {
+            goRelative(payload || -1);
+          } else {
+            goTo(payload);
+          }
         });
-        const set = new Set([...scoped, ...targeted]);
-        return Array.from(set);
       }
 
-      collectButtons(NEXT_SELECTOR).forEach((btn) => {
+      Array.from(document.querySelectorAll(NEXT_SELECTOR)).forEach((btn) => {
         const target = resolveButtonTarget(btn, "data-scroll-next");
         if (target && target !== scope) return;
-        btn.addEventListener("click", (event) => {
-          event.preventDefault();
-          goRelative(1);
-        });
+        attachExternalButton(btn, "data-scroll-next", 1);
       });
-
-      collectButtons(PREV_SELECTOR).forEach((btn) => {
+      Array.from(document.querySelectorAll(PREV_SELECTOR)).forEach((btn) => {
         const target = resolveButtonTarget(btn, "data-scroll-prev");
         if (target && target !== scope) return;
-        btn.addEventListener("click", (event) => {
-          event.preventDefault();
-          goRelative(-1);
-        });
+        attachExternalButton(btn, "data-scroll-prev", -1);
       });
-
-      collectButtons(TO_SELECTOR).forEach((btn) => {
+      Array.from(document.querySelectorAll(TO_SELECTOR)).forEach((btn) => {
         const target = resolveButtonTarget(btn, "data-scroll-to");
         if (target && target !== scope) return;
         const targetIndex = clampIndex(btn.dataset.scrollTo, slides.length - 1);
         if (!Number.isFinite(targetIndex)) return;
-        btn.addEventListener("click", (event) => {
-          event.preventDefault();
-          goTo(targetIndex);
-        });
+        attachExternalButton(btn, "data-scroll-to", targetIndex);
       });
+      scope.addEventListener(
+        "click",
+        (event) => {
+          const nextBtn = event.target.closest(NEXT_SELECTOR);
+          if (nextBtn && resolveButtonTarget(nextBtn, "data-scroll-next") === scope) {
+            event.preventDefault();
+            clearAutoplay();
+            goRelative(1);
+            return;
+          }
+          const prevBtn = event.target.closest(PREV_SELECTOR);
+          if (prevBtn && resolveButtonTarget(prevBtn, "data-scroll-prev") === scope) {
+            event.preventDefault();
+            clearAutoplay();
+            goRelative(-1);
+            return;
+          }
+          const toBtn = event.target.closest(TO_SELECTOR);
+          if (toBtn && resolveButtonTarget(toBtn, "data-scroll-to") === scope) {
+            event.preventDefault();
+            const targetIndex = clampIndex(toBtn.dataset.scrollTo, slides.length - 1);
+            if (Number.isFinite(targetIndex)) {
+              clearAutoplay();
+              goTo(targetIndex);
+            }
+          }
+        },
+        true
+      );
       scope.addEventListener("verticalscroll:go", (event) => {
         const detail = event.detail || {};
         if (typeof detail.index === "number") {
