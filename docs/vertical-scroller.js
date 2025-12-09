@@ -105,6 +105,10 @@
       let activeIndex = clampIndex(dataset.scrollStartIndex, slides.length - 1);
       let pendingTween = null;
       let isAnimating = false;
+      let isHovered = false;
+      const autoplayInterval = toNumber(dataset.scrollAutoplay, 0);
+      const autoplayDirection = dataset.scrollAutoplayDirection === "reverse" ? -1 : 1;
+      let autoplayTimer = null;
 
       const emitChange = () => {
         scope.dispatchEvent(
@@ -112,7 +116,22 @@
             detail: { index: activeIndex, slide: slides[activeIndex] },
           })
         );
+        scheduleAutoplay();
       };
+
+      function clearAutoplay() {
+        if (!autoplayTimer) return;
+        clearTimeout(autoplayTimer);
+        autoplayTimer = null;
+      }
+
+      function scheduleAutoplay() {
+        if (!autoplayInterval || isHovered) return;
+        clearAutoplay();
+        autoplayTimer = setTimeout(() => {
+          goRelative(autoplayDirection);
+        }, autoplayInterval);
+      }
 
       function updateActiveState() {
         slides.forEach((slide, index) => {
@@ -154,6 +173,7 @@
         const target = indexToUse(index);
 
         if (target === activeIndex && !immediate) return false;
+        clearAutoplay();
 
         const distance = Math.abs(target - activeIndex) || 1;
         activeIndex = target;
@@ -195,6 +215,7 @@
         if (!wheelEnabled || isAnimating) return;
         if (!scope.contains(event.target)) return;
         if (Math.abs(event.deltaY) < wheelThreshold) return;
+        clearAutoplay();
         const moved = goRelative(event.deltaY > 0 ? 1 : -1);
         if (moved) event.preventDefault();
       }
@@ -221,6 +242,7 @@
           return;
         }
         pointerActive = true;
+        clearAutoplay();
       }
 
       function pointerUp(event) {
@@ -261,13 +283,24 @@
         if (!keysEnabled || isAnimating) return;
         if (!scope.contains(event.target)) return;
         if (event.key === "ArrowDown" || event.key === "PageDown") {
+          clearAutoplay();
           const moved = goRelative(1);
           if (moved) event.preventDefault();
         } else if (event.key === "ArrowUp" || event.key === "PageUp") {
+          clearAutoplay();
           const moved = goRelative(-1);
           if (moved) event.preventDefault();
         }
       }
+
+      scope.addEventListener("mouseenter", () => {
+        isHovered = true;
+        clearAutoplay();
+      });
+      scope.addEventListener("mouseleave", () => {
+        isHovered = false;
+        scheduleAutoplay();
+      });
 
       scope.querySelectorAll(NEXT_SELECTOR).forEach((btn) => {
         if (btn.closest(BASE_SCOPE) !== scope) return;
@@ -294,6 +327,14 @@
           goTo(targetIndex);
         });
       });
+      scope.addEventListener("verticalscroll:go", (event) => {
+        const detail = event.detail || {};
+        if (typeof detail.index === "number") {
+          goTo(detail.index);
+        } else if (typeof detail.delta === "number") {
+          goRelative(detail.delta);
+        }
+      });
 
       if (wheelEnabled) scope.addEventListener("wheel", handleWheel, { passive: false });
       if (touchEnabled) {
@@ -316,6 +357,7 @@
       });
 
       setImmediate(activeIndex);
+      scheduleAutoplay();
     });
   }
 
