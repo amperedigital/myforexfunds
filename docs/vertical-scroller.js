@@ -1,34 +1,30 @@
 /**
  * GSAP Vertical Scroller
- * ======================
- * Turns any `[data-vertical-scroll]` wrapper into a wheel/touch driven
- * vertical slideshow with easing handled by GSAP.
+ * Smooth vertical slide navigation powered by GSAP with wheel, touch, and key controls.
  *
- * Markup structure (example):
- *
+ * Usage:
  * <section data-vertical-scroll data-scroll-ease="power3.out">
- *   <div class="vertical-scroll-track" data-scroll-track>
- *     <article class="vertical-slide" data-scroll-slide>...</article>
- *     <article class="vertical-slide" data-scroll-slide>...</article>
+ *   <div data-scroll-track>
+ *     <article data-scroll-slide>Slide 1</article>
+ *     <article data-scroll-slide>Slide 2</article>
  *   </div>
  *   <button data-scroll-prev>Prev</button>
  *   <button data-scroll-next>Next</button>
  *   <button data-scroll-to="0">1</button>
- *   <button data-scroll-to="1">2</button>
  * </section>
  *
- * Data attributes on the scope:
- *   data-scroll-duration="0.85"  (seconds or "850ms")
+ * Data attributes:
+ *   data-scroll-duration="0.85"   // seconds or "850ms"
  *   data-scroll-ease="power2.out"
  *   data-scroll-loop="true|false"
- *   data-scroll-wheel="false"    (disable wheel capture)
- *   data-scroll-touch="false"    (disable swipe)
- *   data-scroll-keys="false"     (disable arrow/PageUp/PageDown)
- *   data-scroll-slide-height="100vh" (sets flex-basis / min-height for slides)
- *   data-scroll-track=".my-track"    (custom track selector inside scope)
- *   data-scroll-slide=".my-slide"    (custom slide selector)
+ *   data-scroll-wheel="false"
+ *   data-scroll-touch="false"
+ *   data-scroll-keys="false"
+ *   data-scroll-slide-height="100vh"
+ *   data-scroll-track=".selector"
+ *   data-scroll-slide=".selector"
  *
- * Emits a `verticalscroll:change` event on the scope whenever the active slide changes.
+ * Emits `verticalscroll:change` with `{ index, slide }`.
  */
 (function initGsapVerticalScroller() {
   const BASE_SCOPE = "[data-vertical-scroll]";
@@ -37,22 +33,27 @@
   const NEXT_SELECTOR = "[data-scroll-next]";
   const PREV_SELECTOR = "[data-scroll-prev]";
   const TO_SELECTOR = "[data-scroll-to]";
+  const MAX_WAIT_ATTEMPTS = 80;
+  const WAIT_INTERVAL = 120;
 
   const prefersReduce =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  function initScroller() {
-    const gsap = window.gsap;
-    const scopes = Array.from(document.querySelectorAll(BASE_SCOPE));
-    if (!scopes.length) return;
+  function queryScopes() {
+    return Array.from(document.querySelectorAll(BASE_SCOPE));
+  }
 
-    if (!gsap) {
-      scopes.forEach((scope) => {
-        scope.style.overflowY = scope.style.overflowY || "auto";
-        scope.style.touchAction = scope.style.touchAction || "pan-y";
-      });
-      return;
-    }
+  function enableNativeScroll(scopes) {
+    scopes.forEach((scope) => {
+      if (scope.__verticalScrollInit) return;
+      scope.style.overflowY = scope.style.overflowY || "auto";
+      scope.style.touchAction = scope.style.touchAction || "pan-y";
+    });
+  }
+
+  function initScopes(scopes) {
+    const gsap = window.gsap;
+    if (!gsap) return;
 
     scopes.forEach((scope) => {
       if (scope.__verticalScrollInit) return;
@@ -103,15 +104,16 @@
       });
 
       let activeIndex = clampIndex(dataset.scrollStartIndex, slides.length - 1);
-      let isAnimating = false;
       let pendingTween = null;
+      let isAnimating = false;
 
-      const changeEvent = () =>
+      const emitChange = () => {
         scope.dispatchEvent(
           new CustomEvent("verticalscroll:change", {
             detail: { index: activeIndex, slide: slides[activeIndex] },
           })
         );
+      };
 
       function updateActiveState() {
         slides.forEach((slide, index) => {
@@ -123,18 +125,10 @@
         scope.querySelectorAll(TO_SELECTOR).forEach((btn) => {
           if (btn.closest(BASE_SCOPE) !== scope) return;
           const targetIndex = clampIndex(btn.dataset.scrollTo, slides.length - 1);
-          const isMatch = targetIndex === activeIndex;
-          btn.classList.toggle("is-active", isMatch);
-          btn.setAttribute("aria-pressed", isMatch ? "true" : "false");
+          const match = targetIndex === activeIndex;
+          btn.classList.toggle("is-active", match);
+          btn.setAttribute("aria-pressed", match ? "true" : "false");
         });
-      }
-
-      function immediateSet(index) {
-        const target = indexToUse(index);
-        activeIndex = target;
-        gsap.set(track, { yPercent: -100 * target });
-        updateActiveState();
-        changeEvent();
       }
 
       function indexToUse(index) {
@@ -148,14 +142,19 @@
         return Math.min(Math.max(0, target), total - 1);
       }
 
+      function setImmediate(index) {
+        const target = indexToUse(index);
+        activeIndex = target;
+        gsap.set(track, { yPercent: -100 * target });
+        updateActiveState();
+        emitChange();
+      }
+
       function goTo(index, opts = {}) {
         const { immediate = false } = opts;
-        const total = slides.length;
-        let target = indexToUse(index);
+        const target = indexToUse(index);
 
-        if (target === activeIndex && !immediate) {
-          return false;
-        }
+        if (target === activeIndex && !immediate) return false;
 
         const distance = Math.abs(target - activeIndex) || 1;
         activeIndex = target;
@@ -168,7 +167,7 @@
 
         if (immediate || duration === 0) {
           gsap.set(track, { yPercent: -100 * target });
-          changeEvent();
+          emitChange();
           isAnimating = false;
           return true;
         }
@@ -181,7 +180,7 @@
           onComplete: () => {
             isAnimating = false;
             pendingTween = null;
-            changeEvent();
+            emitChange();
           },
         });
 
@@ -190,8 +189,7 @@
 
       function goRelative(delta) {
         if (!delta) return false;
-        const target = loopSlides ? activeIndex + delta : activeIndex + delta;
-        return goTo(target);
+        return goTo(activeIndex + delta);
       }
 
       function handleWheel(event) {
@@ -199,17 +197,14 @@
         if (!scope.contains(event.target)) return;
         if (Math.abs(event.deltaY) < wheelThreshold) return;
         const moved = goRelative(event.deltaY > 0 ? 1 : -1);
-        if (moved) {
-          event.preventDefault();
-        }
+        if (moved) event.preventDefault();
       }
 
+      const supportsPointer = "PointerEvent" in window;
+      let pointerActive = false;
       let pointerStartY = 0;
       let pointerStartX = 0;
-      let pointerActive = false;
       let pointerId = null;
-
-      const supportsPointer = "PointerEvent" in window;
 
       function pointerDown(event) {
         if (!touchEnabled || isAnimating) return;
@@ -218,12 +213,13 @@
           pointerId = event.pointerId;
           pointerStartY = event.clientY;
           pointerStartX = event.clientX;
+        } else if (event.touches && event.touches.length) {
+          const first = event.touches[0];
+          pointerId = first.identifier;
+          pointerStartY = first.clientY;
+          pointerStartX = first.clientX;
         } else {
-          if (!event.touches || !event.touches.length) return;
-          const primary = event.touches[0];
-          pointerId = primary.identifier;
-          pointerStartY = primary.clientY;
-          pointerStartX = primary.clientX;
+          return;
         }
         pointerActive = true;
       }
@@ -237,22 +233,14 @@
         } else if (event.changedTouches && event.changedTouches.length) {
           point = findTouch(event.changedTouches, pointerId) || event.changedTouches[0];
         }
-        if (!point) {
-          pointerActive = false;
-          pointerId = null;
-          return;
-        }
-        const deltaY = point.clientY - pointerStartY;
-        const deltaX = point.clientX - pointerStartX;
         pointerActive = false;
         pointerId = null;
-        if (Math.abs(deltaY) < swipeThreshold || Math.abs(deltaY) < Math.abs(deltaX)) {
-          return;
-        }
+        if (!point) return;
+        const deltaY = point.clientY - pointerStartY;
+        const deltaX = point.clientX - pointerStartX;
+        if (Math.abs(deltaY) < swipeThreshold || Math.abs(deltaY) < Math.abs(deltaX)) return;
         const moved = goRelative(deltaY < 0 ? 1 : -1);
-        if (moved && event.cancelable) {
-          event.preventDefault();
-        }
+        if (moved && event.cancelable) event.preventDefault();
       }
 
       function pointerMove(event) {
@@ -266,20 +254,17 @@
         }
         if (!point) return;
         const deltaY = Math.abs(point.clientY - pointerStartY);
-               const deltaX = Math.abs(point.clientX - pointerStartX);
-        if (deltaY > deltaX && event.cancelable) {
-          event.preventDefault();
-        }
+        const deltaX = Math.abs(point.clientX - pointerStartX);
+        if (deltaY > deltaX && event.cancelable) event.preventDefault();
       }
 
       function handleKeydown(event) {
         if (!keysEnabled || isAnimating) return;
         if (!scope.contains(event.target)) return;
-        const key = event.key;
-        if (key === "ArrowDown" || key === "PageDown") {
+        if (event.key === "ArrowDown" || event.key === "PageDown") {
           const moved = goRelative(1);
           if (moved) event.preventDefault();
-        } else if (key === "ArrowUp" || key === "PageUp") {
+        } else if (event.key === "ArrowUp" || event.key === "PageUp") {
           const moved = goRelative(-1);
           if (moved) event.preventDefault();
         }
@@ -311,9 +296,7 @@
         });
       });
 
-      if (wheelEnabled) {
-        scope.addEventListener("wheel", handleWheel, { passive: false });
-      }
+      if (wheelEnabled) scope.addEventListener("wheel", handleWheel, { passive: false });
       if (touchEnabled) {
         if (supportsPointer) {
           scope.addEventListener("pointerdown", pointerDown, { passive: true });
@@ -327,42 +310,41 @@
           scope.addEventListener("touchcancel", pointerUp, { passive: true });
         }
       }
-      if (keysEnabled) {
-        scope.addEventListener("keydown", handleKeydown);
-      }
+      if (keysEnabled) scope.addEventListener("keydown", handleKeydown);
 
       window.addEventListener("resize", () => {
         gsap.set(track, { yPercent: -100 * activeIndex });
       });
 
-      function findTouch(list, identifier) {
-        if (!list) return null;
-        for (let i = 0; i < list.length; i += 1) {
-          if (list[i].identifier === identifier) return list[i];
-        }
-        return null;
-      }
-
-      immediateSet(activeIndex);
+      setImmediate(activeIndex);
     });
+  }
+
+  function waitForGsap(attempt = 0) {
+    const scopes = queryScopes();
+    if (!scopes.length) return;
+
+    if (window.gsap) {
+      initScopes(scopes);
+      return;
+    }
+
+    if (attempt >= MAX_WAIT_ATTEMPTS) {
+      enableNativeScroll(scopes);
+      return;
+    }
+
+    setTimeout(() => waitForGsap(attempt + 1), WAIT_INTERVAL);
   }
 
   function bootWhenReady() {
     if (document.readyState === "complete" || document.readyState === "interactive") {
-      if (window.gsap) {
-        initScroller();
-      } else {
-        window.addEventListener("load", initScroller, { once: true });
-      }
+      waitForGsap();
     } else {
       document.addEventListener(
         "DOMContentLoaded",
         () => {
-          if (window.gsap) {
-            initScroller();
-          } else {
-            window.addEventListener("load", initScroller, { once: true });
-          }
+          waitForGsap();
         },
         { once: true }
       );
@@ -393,5 +375,13 @@
     }
     const parsed = parseFloat(raw);
     return Number.isFinite(parsed) ? parsed : fallbackSeconds;
+  }
+
+  function findTouch(list, identifier) {
+    if (!list) return null;
+    for (let i = 0; i < list.length; i += 1) {
+      if (list[i].identifier === identifier) return list[i];
+    }
+    return null;
   }
 })();
