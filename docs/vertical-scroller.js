@@ -302,28 +302,44 @@
         scheduleAutoplay();
       });
 
-      function buttonMatchesScope(btn) {
+      function resolveButtonTarget(btn, attrName) {
         const direct = btn.closest(BASE_SCOPE);
-        if (direct) return direct === scope;
-        const targetSelector = btn.getAttribute("data-scroll-target");
-        if (targetSelector) {
-          const targetEl = document.querySelector(targetSelector);
-          if (targetEl) return targetEl === scope;
+        if (direct) return direct;
+        const explicit =
+          btn.getAttribute("data-scroll-target") ||
+          btn.getAttribute(attrName) ||
+          btn.getAttribute("aria-controls") ||
+          btn.getAttribute("href") ||
+          "";
+        const selector = explicit.trim();
+        if (selector.startsWith("#")) {
+          return document.querySelector(selector);
         }
         return false;
       }
 
       function collectButtons(selector) {
         const scoped = Array.from(scope.querySelectorAll(selector));
-        const targeted = Array.from(
-          document.querySelectorAll(`${selector}[data-scroll-target]`)
-        ).filter((btn) => buttonMatchesScope(btn));
+        const targeted = Array.from(document.querySelectorAll(selector)).filter((btn) => {
+          if (scoped.includes(btn)) return false;
+          const target =
+            resolveButtonTarget(
+              btn,
+              selector === NEXT_SELECTOR
+                ? "data-scroll-next"
+                : selector === PREV_SELECTOR
+                ? "data-scroll-prev"
+                : "data-scroll-to"
+            ) || null;
+          return target === scope;
+        });
         const set = new Set([...scoped, ...targeted]);
         return Array.from(set);
       }
 
       collectButtons(NEXT_SELECTOR).forEach((btn) => {
-        if (!buttonMatchesScope(btn)) return;
+        const target = resolveButtonTarget(btn, "data-scroll-next");
+        if (target && target !== scope) return;
         btn.addEventListener("click", (event) => {
           event.preventDefault();
           goRelative(1);
@@ -331,7 +347,8 @@
       });
 
       collectButtons(PREV_SELECTOR).forEach((btn) => {
-        if (!buttonMatchesScope(btn)) return;
+        const target = resolveButtonTarget(btn, "data-scroll-prev");
+        if (target && target !== scope) return;
         btn.addEventListener("click", (event) => {
           event.preventDefault();
           goRelative(-1);
@@ -339,7 +356,8 @@
       });
 
       collectButtons(TO_SELECTOR).forEach((btn) => {
-        if (!buttonMatchesScope(btn)) return;
+        const target = resolveButtonTarget(btn, "data-scroll-to");
+        if (target && target !== scope) return;
         const targetIndex = clampIndex(btn.dataset.scrollTo, slides.length - 1);
         if (!Number.isFinite(targetIndex)) return;
         btn.addEventListener("click", (event) => {
