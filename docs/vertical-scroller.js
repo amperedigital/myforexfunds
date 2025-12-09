@@ -87,15 +87,27 @@
       const wheelThreshold = toNumber(dataset.scrollWheelThreshold, 10);
       const swipeThreshold = toNumber(dataset.scrollSwipeThreshold, 50);
 
-      scope.dataset.scrollOriginalOverflowY ??= scope.style.overflowY || "";
-      scope.dataset.scrollOriginalOverflow ??= scope.style.overflow || "";
-      scope.style.setProperty("overflow-y", "hidden", "important");
-      scope.style.setProperty("overflow-x", "hidden", "important");
-      scope.style.setProperty("overflow", "hidden", "important");
+      function applyOverflowState() {
+        scope.style.setProperty("overflow-y", "hidden", "important");
+        scope.style.setProperty("overflow-x", "hidden", "important");
+        scope.style.setProperty("overflow", "hidden", "important");
+      }
+      applyOverflowState();
+      const overflowWatcher = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === "style") {
+            applyOverflowState();
+          }
+        });
+      });
+      overflowWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
+
       scope.style.position = scope.style.position || "relative";
       scope.style.touchAction = scope.style.touchAction || "none";
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
-      if (!scope.style.height) scope.style.height = slideHeight;
+      if (!scope.style.height || scope.style.height === "auto") {
+        scope.style.height = slideHeight;
+      }
 
       track.style.display = track.style.display || "flex";
       track.style.flexDirection = track.style.flexDirection || "column";
