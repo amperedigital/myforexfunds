@@ -33,8 +33,7 @@
   const NEXT_SELECTOR = "[data-scroll-next]";
   const PREV_SELECTOR = "[data-scroll-prev]";
   const TO_SELECTOR = "[data-scroll-to]";
-  const MAX_WAIT_ATTEMPTS = 80;
-  const WAIT_INTERVAL = 120;
+  const WAIT_INTERVAL = 150;
 
   const prefersReduce =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -320,7 +319,7 @@
     });
   }
 
-  function waitForGsap(attempt = 0) {
+  function waitForGsap() {
     const scopes = queryScopes();
     if (!scopes.length) return;
 
@@ -329,12 +328,7 @@
       return;
     }
 
-    if (attempt >= MAX_WAIT_ATTEMPTS) {
-      enableNativeScroll(scopes);
-      return;
-    }
-
-    setTimeout(() => waitForGsap(attempt + 1), WAIT_INTERVAL);
+    setTimeout(waitForGsap, WAIT_INTERVAL);
   }
 
   function bootWhenReady() {
