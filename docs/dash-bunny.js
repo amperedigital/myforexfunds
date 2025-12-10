@@ -286,7 +286,10 @@
 
     // In-view auto play/pause (only when autoplay is true)
     if (autoplay) {
-      var io = new IntersectionObserver(function(entries) {
+      var pointerCoarseMedia = window.matchMedia ? window.matchMedia('(pointer: coarse)') : null;
+      var disableIoAutopause = pointerCoarseMedia ? pointerCoarseMedia.matches : false;
+      var io = null;
+      function handleIoEntries(entries) {
         entries.forEach(function(entry) {
           var inView = entry.isIntersecting && entry.intersectionRatio > 0;
           var canRestart =
@@ -311,8 +314,30 @@
             }
           }
         });
-      }, { threshold: 0.1 });
-      io.observe(player);
+      }
+      function attachIntersectionObserver() {
+        if (io || disableIoAutopause) return;
+        io = new IntersectionObserver(handleIoEntries, { threshold: 0.1 });
+        io.observe(player);
+      }
+      function detachIntersectionObserver() {
+        if (!io) return;
+        io.disconnect();
+        io = null;
+      }
+      if (!disableIoAutopause) {
+        attachIntersectionObserver();
+      }
+      if (pointerCoarseMedia && typeof pointerCoarseMedia.addEventListener === 'function') {
+        pointerCoarseMedia.addEventListener('change', function(event) {
+          disableIoAutopause = event.matches;
+          if (disableIoAutopause) {
+            detachIntersectionObserver();
+          } else {
+            attachIntersectionObserver();
+          }
+        });
+      }
 
       var kickstartAutoplay = function() {
         requestAutoplayIfReady('kickstart', false);
