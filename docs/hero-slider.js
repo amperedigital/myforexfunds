@@ -7,7 +7,12 @@
     const navSelector = '.swiper-button-next, .swiper-button-prev, .swiper-pagination-bullet';
 
     const sliderEl = document.querySelector(sliderSelector);
-    if (!sliderEl || typeof Swiper === 'undefined') return;
+    if (!sliderEl || typeof Swiper === 'undefined') {
+      console.warn('[hero-slider] slider element or Swiper missing.');
+      return;
+    }
+
+    console.log('[hero-slider] initializing controller');
 
     const scope = sliderEl.closest('.timeline-tabs') || document;
     const breakpoint = window.matchMedia('(max-width: 767px)');
@@ -137,8 +142,14 @@
       breakpoint.addListener(applyMode);
     }
 
-    sliderEl.addEventListener('mouseenter', () => syncPlaybackState('hover-enter'));
-    sliderEl.addEventListener('mouseleave', () => syncPlaybackState('hover-leave'));
+    sliderEl.addEventListener('mouseenter', () => {
+      console.log('[hero-slider] hover enter');
+      syncPlaybackState('hover-enter');
+    });
+    sliderEl.addEventListener('mouseleave', () => {
+      console.log('[hero-slider] hover leave');
+      syncPlaybackState('hover-leave');
+    });
 
     if (window.MutationObserver) {
       const observer = new MutationObserver(() => syncPlaybackState('mutation'));
@@ -159,7 +170,9 @@
 
       function closeSlides(exceptSlide) {
         suppress = true;
-        collectOpenSlides()
+        const openSlides = collectOpenSlides();
+        console.log('[hero-slider] closeSlides: found open slides', openSlides);
+        openSlides
           .filter((slide) => !exceptSlide || slide !== exceptSlide)
           .forEach((slide) => {
             const panel = slide.querySelector(panelSelector);
@@ -170,6 +183,7 @@
               footer.querySelector('button, [role="button"], [data-w-id], [data-trigger="card-footer"]') || footer;
             trigger.dataset.heroSingleOpen = 'true';
             trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            console.log('[hero-slider] dispatching close for slide', slide);
           });
         requestAnimationFrame(() => {
           suppress = false;
