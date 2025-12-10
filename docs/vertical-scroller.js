@@ -34,12 +34,56 @@
   const PREV_SELECTOR = "[data-scroll-prev]";
   const TO_SELECTOR = "[data-scroll-to]";
   const WAIT_INTERVAL = 150;
+  const STYLE_ID = "gsap-vertical-scroll-base";
 
   const prefersReduce =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  function injectBaseStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+${BASE_SCOPE} {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+${BASE_SCOPE} ${DEFAULT_TRACK},
+${BASE_SCOPE} .vertical-scroll-track {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  width: 100% !important;
+  will-change: transform !important;
+}
+${BASE_SCOPE} ${DEFAULT_SLIDE},
+${BASE_SCOPE} .vertical-slide {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+}
+`;
+    document.head.appendChild(style);
+  }
+
   function queryScopes() {
     return Array.from(document.querySelectorAll(BASE_SCOPE));
+  }
+
+  function enableNativeScroll(scopes) {
+    injectBaseStyles();
+    scopes.forEach((scope) => {
+      if (scope.__verticalScrollInit) return;
+      scope.style.setProperty("overflow-y", "auto", "important");
+      scope.style.setProperty("overflow-x", "auto", "important");
+      scope.style.setProperty("overflow", "auto", "important");
+      scope.style.touchAction = scope.style.touchAction || "pan-y";
+    });
   }
 
   function initScopes(scopes) {
@@ -69,16 +113,12 @@
         return;
       }
 
-      const declaredSlideHeightRaw = dataset.scrollSlideHeight || "";
-      const normalizedSlideHeight =
-        declaredSlideHeightRaw && declaredSlideHeightRaw.toLowerCase() !== "auto"
-          ? declaredSlideHeightRaw
-          : "";
-      const hasFixedSlideHeight = Boolean(normalizedSlideHeight);
+      const declaredSlideHeight = dataset.scrollSlideHeight || "";
+      const hasFixedSlideHeight = Boolean(declaredSlideHeight);
       const ease = dataset.scrollEase || "power2.out";
       const duration = normalizeDuration(dataset.scrollDuration, 0.85);
       const loopSlides = dataset.scrollLoop === "true";
-      const wheelEnabled = dataset.scrollWheel === "true";
+      const wheelEnabled = dataset.scrollWheel !== "false";
       const wheelLock = dataset.scrollLock === "true";
       const touchEnabled = dataset.scrollTouch !== "false";
       const keysEnabled = dataset.scrollKeys !== "false";
@@ -92,15 +132,13 @@
         scope.style.setProperty("display", "block", "important");
         scope.style.setProperty("overflow", "hidden", "important");
         scope.style.setProperty("touch-action", "none", "important");
-        if (hasFixedSlideHeight) {
-          scope.style.setProperty("height", normalizedSlideHeight, "important");
-          scope.style.setProperty("min-height", normalizedSlideHeight, "important");
-        }
       }
       applyScopeState();
       const scopeWatcher = new MutationObserver((mutations) => {
         const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
-        if (needsUpdate) applyScopeState();
+        if (needsUpdate) {
+          applyScopeState();
+        }
       });
       scopeWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
 
@@ -125,16 +163,18 @@
       applyTrackState();
       const trackWatcher = new MutationObserver((mutations) => {
         const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
-        if (needsUpdate) applyTrackState();
+        if (needsUpdate) {
+          applyTrackState();
+        }
       });
       trackWatcher.observe(track, { attributes: true, attributeFilter: ["style"] });
 
       slides.forEach((slide) => {
         slide.style.setProperty("flex", "0 0 auto", "important");
         slide.style.setProperty("width", "100%", "important");
-        if (hasFixedSlideHeight) {
-          slide.style.setProperty("min-height", normalizedSlideHeight, "important");
-          slide.style.setProperty("height", normalizedSlideHeight, "important");
+        if (hasFixedSlideHeight && declaredSlideHeight) {
+          slide.style.setProperty("min-height", declaredSlideHeight, "important");
+          slide.style.setProperty("height", declaredSlideHeight, "important");
         }
       });
 
@@ -146,6 +186,18 @@
         metricsDirty = true;
       }
 
+      function getSlideOuterHeight(slide) {
+        const rect = slide.getBoundingClientRect();
+        let height = rect.height || slide.offsetHeight || slide.scrollHeight || 0;
+        if (window.getComputedStyle) {
+          const computed = window.getComputedStyle(slide);
+          const marginTop = parseFloat(computed.marginTop) || 0;
+          const marginBottom = parseFloat(computed.marginBottom) || 0;
+          height += marginTop + marginBottom;
+        }
+        return height;
+      }
+
       function measureSlides() {
         metricsDirty = false;
         let running = 0;
@@ -153,8 +205,7 @@
         slideOffsets = [];
         slideHeights = [];
         slides.forEach((slide, index) => {
-          const rect = slide.getBoundingClientRect();
-          const height = rect.height || slide.offsetHeight || 0;
+          const height = getSlideOuterHeight(slide);
           slideOffsets[index] = running;
           slideHeights[index] = height;
           running += height;
@@ -168,11 +219,13 @@
             scope.offsetHeight ||
             0;
         }
-        if (!hasFixedSlideHeight && maxHeight > 0) {
-          const targetHeight = `${maxHeight}px`;
-          scope.style.setProperty("height", targetHeight, "important");
-          scope.style.setProperty("min-height", targetHeight, "important");
-        }
+        const targetHeight = hasFixedSlideHeight
+          ? declaredSlideHeight
+          : maxHeight > 0
+          ? `${maxHeight}px`
+          : `${running}px`;
+        scope.style.setProperty("height", targetHeight, "important");
+        scope.style.setProperty("min-height", targetHeight, "important");
       }
 
       function ensureMetrics() {
@@ -323,9 +376,9 @@
       }
 
       function maybeLockWheel(event) {
-        if (!wheelLock) return;
-        if (!event || !scope.contains(event.target)) return;
-        if (event.cancelable) event.preventDefault();
+        if (!wheelLock || !event || !event.cancelable) return;
+        if (!scope.contains(event.target)) return;
+        event.preventDefault();
       }
 
       function handleWheel(event) {
