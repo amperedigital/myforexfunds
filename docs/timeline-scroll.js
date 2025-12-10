@@ -16,6 +16,9 @@
 
     function pointerDown(event) {
       if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (event.pointerType === 'mouse' && event.target.closest('.timeline-item')) {
+        return;
+      }
       dragging = true;
       startX = event.clientX;
       startScroll = wrapper.scrollLeft;
@@ -35,7 +38,9 @@
       if (!dragging) return;
       dragging = false;
       wrapper.classList.remove('is-dragging');
-      wrapper.releasePointerCapture(event.pointerId);
+      if (wrapper.hasPointerCapture && wrapper.hasPointerCapture(event.pointerId)) {
+        wrapper.releasePointerCapture(event.pointerId);
+      }
     }
 
     wrapper.addEventListener('pointerdown', pointerDown);
