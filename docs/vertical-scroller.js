@@ -123,6 +123,12 @@
         track.style.setProperty("flex-direction", "column", "important");
         track.style.setProperty("width", "100%", "important");
         track.style.setProperty("height", "100%", "important");
+        track.style.setProperty("padding", "0", "important");
+        track.style.setProperty("margin", "0", "important");
+        track.style.setProperty("gap", "0", "important");
+        track.style.setProperty("grid-column-gap", "0", "important");
+        track.style.setProperty("grid-row-gap", "0", "important");
+        track.style.setProperty("overflow", "visible", "important");
         track.style.setProperty("pointer-events", "auto", "important");
         track.style.setProperty("will-change", "transform");
         if (!track.style.transform) {
