@@ -1,5 +1,6 @@
 (function heroSliderInit() {
-  if (typeof Swiper === "undefined") return;
+  function run() {
+    if (typeof Swiper === "undefined") return;
 
   const sliderSelector = ".timeline-slider";
   const targetAttr = "data-hero-slider";
@@ -296,4 +297,11 @@
   return () => {
     instances.forEach((instance) => instance?.destroy?.());
   };
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", run, { once: true });
+  } else {
+    run();
+  }
 })();
