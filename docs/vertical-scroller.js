@@ -34,56 +34,12 @@
   const PREV_SELECTOR = "[data-scroll-prev]";
   const TO_SELECTOR = "[data-scroll-to]";
   const WAIT_INTERVAL = 150;
-  const STYLE_ID = "gsap-vertical-scroll-base";
 
   const prefersReduce =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  function injectBaseStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement("style");
-    style.id = STYLE_ID;
-    style.textContent = `
-${BASE_SCOPE} {
-  position: relative !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  touch-action: none !important;
-}
-${BASE_SCOPE} ${DEFAULT_TRACK},
-${BASE_SCOPE} .vertical-scroll-track {
-  position: relative !important;
-  display: flex !important;
-  flex-direction: column !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  gap: 0 !important;
-  width: 100% !important;
-  will-change: transform !important;
-}
-${BASE_SCOPE} ${DEFAULT_SLIDE},
-${BASE_SCOPE} .vertical-slide {
-  flex: 0 0 auto !important;
-  width: 100% !important;
-}
-`;
-    document.head.appendChild(style);
-  }
-
   function queryScopes() {
     return Array.from(document.querySelectorAll(BASE_SCOPE));
-  }
-
-  function enableNativeScroll(scopes) {
-    injectBaseStyles();
-    scopes.forEach((scope) => {
-      if (scope.__verticalScrollInit) return;
-      scope.style.setProperty("overflow-y", "auto", "important");
-      scope.style.setProperty("overflow-x", "auto", "important");
-      scope.style.setProperty("overflow", "auto", "important");
-      scope.style.touchAction = scope.style.touchAction || "pan-y";
-    });
   }
 
   function initScopes(scopes) {
@@ -113,67 +69,50 @@ ${BASE_SCOPE} .vertical-slide {
         return;
       }
 
-      const declaredSlideHeight = dataset.scrollSlideHeight || "";
-      const hasFixedSlideHeight = Boolean(declaredSlideHeight);
+      const declaredSlideHeightRaw = dataset.scrollSlideHeight || "";
+      const normalizedSlideHeight =
+        declaredSlideHeightRaw && declaredSlideHeightRaw.toLowerCase() !== "auto"
+          ? declaredSlideHeightRaw
+          : "";
+      const hasFixedSlideHeight = Boolean(normalizedSlideHeight);
       const ease = dataset.scrollEase || "power2.out";
       const duration = normalizeDuration(dataset.scrollDuration, 0.85);
       const loopSlides = dataset.scrollLoop === "true";
-      const wheelEnabled = dataset.scrollWheel !== "false";
+      const wheelEnabled = dataset.scrollWheel === "true";
+      const wheelLock = dataset.scrollLock === "true";
       const touchEnabled = dataset.scrollTouch !== "false";
       const keysEnabled = dataset.scrollKeys !== "false";
       const wheelThreshold = toNumber(dataset.scrollWheelThreshold, 10);
       const swipeThreshold = toNumber(dataset.scrollSwipeThreshold, 50);
 
       function applyScopeState() {
-        scope.style.setProperty("width", "100%", "important");
-        scope.style.setProperty("max-width", "100%", "important");
-        scope.style.setProperty("position", "relative", "important");
-        scope.style.setProperty("display", "block", "important");
-        scope.style.setProperty("overflow", "hidden", "important");
-        scope.style.setProperty("touch-action", "none", "important");
+        if (!scope.style.touchAction || scope.style.touchAction === "auto") {
+          scope.style.touchAction = "none";
+        }
+        if (!scope.style.overflow || scope.style.overflow === "visible") {
+          scope.style.overflow = "hidden";
+        }
+        if (hasFixedSlideHeight) {
+          scope.style.height = normalizedSlideHeight;
+          scope.style.minHeight = normalizedSlideHeight;
+        }
       }
       applyScopeState();
-      const scopeWatcher = new MutationObserver((mutations) => {
-        const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
-        if (needsUpdate) {
-          applyScopeState();
-        }
-      });
-      scopeWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
 
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
 
       function applyTrackState() {
-        track.style.setProperty("position", "relative", "important");
-        track.style.setProperty("display", "flex", "important");
-        track.style.setProperty("flex-direction", "column", "important");
-        track.style.setProperty("width", "100%", "important");
-        track.style.setProperty("padding", "0", "important");
-        track.style.setProperty("margin", "0", "important");
-        track.style.setProperty("gap", "0", "important");
-        track.style.setProperty("grid-column-gap", "0", "important");
-        track.style.setProperty("grid-row-gap", "0", "important");
-        track.style.setProperty("pointer-events", "auto", "important");
-        track.style.setProperty("will-change", "transform");
+        track.style.willChange = track.style.willChange || "transform";
         if (!track.style.transform) {
           track.style.transform = "translate3d(0, 0, 0)";
         }
       }
       applyTrackState();
-      const trackWatcher = new MutationObserver((mutations) => {
-        const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
-        if (needsUpdate) {
-          applyTrackState();
-        }
-      });
-      trackWatcher.observe(track, { attributes: true, attributeFilter: ["style"] });
 
       slides.forEach((slide) => {
-        slide.style.setProperty("flex", "0 0 auto", "important");
-        slide.style.setProperty("width", "100%", "important");
-        if (hasFixedSlideHeight && declaredSlideHeight) {
-          slide.style.setProperty("min-height", declaredSlideHeight, "important");
-          slide.style.setProperty("height", declaredSlideHeight, "important");
+        if (hasFixedSlideHeight) {
+          slide.style.minHeight = normalizedSlideHeight;
+          slide.style.height = normalizedSlideHeight;
         }
       });
 
@@ -207,13 +146,8 @@ ${BASE_SCOPE} .vertical-slide {
             scope.offsetHeight ||
             0;
         }
-        const targetHeight =
-          hasFixedSlideHeight && declaredSlideHeight
-            ? declaredSlideHeight
-            : maxHeight > 0
-            ? `${maxHeight}px`
-            : "";
-        if (targetHeight) {
+        if (!hasFixedSlideHeight && maxHeight > 0) {
+          const targetHeight = `${maxHeight}px`;
           scope.style.setProperty("height", targetHeight, "important");
           scope.style.setProperty("min-height", targetHeight, "important");
         }
@@ -366,13 +300,26 @@ ${BASE_SCOPE} .vertical-slide {
         return goTo(activeIndex + delta);
       }
 
+      function maybeLockWheel(event) {
+        if (!wheelLock) return;
+        if (!event || !scope.contains(event.target)) return;
+        if (event.cancelable) event.preventDefault();
+      }
+
       function handleWheel(event) {
-        if (!wheelEnabled || isAnimating) return;
         if (!scope.contains(event.target)) return;
-        if (Math.abs(event.deltaY) < wheelThreshold) return;
+        if (!wheelEnabled || isAnimating) {
+          maybeLockWheel(event);
+          return;
+        }
+        if (Math.abs(event.deltaY) < wheelThreshold) {
+          maybeLockWheel(event);
+          return;
+        }
         clearAutoplay();
         const moved = goRelative(event.deltaY > 0 ? 1 : -1);
         if (moved) event.preventDefault();
+        else maybeLockWheel(event);
       }
 
       const supportsPointer = "PointerEvent" in window;
