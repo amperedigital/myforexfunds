@@ -96,6 +96,7 @@
     var autoplayLoopOnce = loopAttr === 'once';
     var speedAttr  = player.getAttribute('data-player-speed');
     var playbackRate = parsePlaybackRate(speedAttr);
+    var scrollStable = player.getAttribute('data-player-scroll-stable') === 'true';
 
     // Used to suppress 'ready' flicker when user just pressed play in lazy modes
     var pendingPlay = false;
@@ -287,7 +288,7 @@
     // In-view auto play/pause (only when autoplay is true)
     if (autoplay) {
       var pointerCoarseMedia = window.matchMedia ? window.matchMedia('(pointer: coarse)') : null;
-      var disableIoAutopause = pointerCoarseMedia ? pointerCoarseMedia.matches : false;
+      var disableIoAutopause = scrollStable || (pointerCoarseMedia ? pointerCoarseMedia.matches : false);
       var io = null;
       function handleIoEntries(entries) {
         entries.forEach(function(entry) {
@@ -328,7 +329,7 @@
       if (!disableIoAutopause) {
         attachIntersectionObserver();
       }
-      if (pointerCoarseMedia && typeof pointerCoarseMedia.addEventListener === 'function') {
+      if (!scrollStable && pointerCoarseMedia && typeof pointerCoarseMedia.addEventListener === 'function') {
         pointerCoarseMedia.addEventListener('change', function(event) {
           disableIoAutopause = event.matches;
           if (disableIoAutopause) {
