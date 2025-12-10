@@ -261,6 +261,8 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
     const videoContext = setupVideo(el) || {};
     const videoHost = videoContext.host || null;
     const videoEl = videoContext.video || null;
+    let lastVideoRestartWidth = typeof window !== "undefined" ? window.innerWidth : 0;
+    const VIDEO_RESTART_WIDTH_THRESHOLD = 24;
 
     function restartVideoPlayback() {
       if (!videoEl) return;
@@ -886,7 +888,11 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
         if (Math.abs(w - widthAtLastInit) >= 1) {
           init();
         }
-        restartVideoPlayback();
+        const currentWidth = typeof window !== "undefined" ? window.innerWidth : widthAtLastInit;
+        if (Math.abs(currentWidth - lastVideoRestartWidth) >= VIDEO_RESTART_WIDTH_THRESHOLD) {
+          lastVideoRestartWidth = currentWidth;
+          restartVideoPlayback();
+        }
       }, 200);
     });
     function refreshPointerHandlers() {
