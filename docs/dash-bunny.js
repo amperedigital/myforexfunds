@@ -96,7 +96,8 @@
     var autoplayLoopOnce = loopAttr === 'once';
     var speedAttr  = player.getAttribute('data-player-speed');
     var playbackRate = parsePlaybackRate(speedAttr);
-    var scrollStable = player.getAttribute('data-player-scroll-stable') === 'true';
+    var scrollStableAttr = player.getAttribute('data-player-scroll-stable');
+    var scrollStable = scrollStableAttr !== null && scrollStableAttr !== 'false';
 
     // Used to suppress 'ready' flicker when user just pressed play in lazy modes
     var pendingPlay = false;
