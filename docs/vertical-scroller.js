@@ -599,7 +599,9 @@ ${BASE_SCOPE} .vertical-slide {
         }
       });
 
-      if (wheelEnabled) scope.addEventListener("wheel", handleWheel, { passive: false });
+      if (wheelEnabled || wheelLock) {
+        scope.addEventListener("wheel", handleWheel, { passive: false });
+      }
       if (touchEnabled) {
         if (supportsPointer) {
           scope.addEventListener("pointerdown", pointerDown, { passive: true });
