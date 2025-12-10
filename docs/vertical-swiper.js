@@ -94,9 +94,7 @@
       (slide) => slide.hasAttribute("data-slide-active") || slide.classList.contains("is-active")
     );
     const startIndex = Number.isFinite(explicitStartIndex)
-      ? explicitStartIndex
-      : detectedActiveIndex >= 0
-      ? detectedActiveIndex
+      ? Math.max(0, explicitStartIndex)
       : 0;
 
     scope.classList.add("hero-vertical-swiper", "swiper");
