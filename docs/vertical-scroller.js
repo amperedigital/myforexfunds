@@ -30,6 +30,7 @@
   const BASE_SCOPE = "[data-vertical-scroll]";
   const DEFAULT_TRACK = "[data-scroll-track]";
   const DEFAULT_SLIDE = "[data-scroll-slide]";
+  const VIEWPORT_CLASS = "gsap-vertical-scroll-viewport";
   const NEXT_SELECTOR = "[data-scroll-next]";
   const PREV_SELECTOR = "[data-scroll-prev]";
   const TO_SELECTOR = "[data-scroll-to]";
@@ -48,12 +49,13 @@ ${BASE_SCOPE} {
   position: relative !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow: hidden !important;
-  touch-action: none !important;
 }
 ${BASE_SCOPE} ${DEFAULT_TRACK},
 ${BASE_SCOPE} .vertical-scroll-track {
-  position: relative !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   padding: 0 !important;
@@ -61,6 +63,12 @@ ${BASE_SCOPE} .vertical-scroll-track {
   gap: 0 !important;
   width: 100% !important;
   will-change: transform !important;
+}
+.${VIEWPORT_CLASS} {
+  position: relative !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  display: block !important;
 }
 ${BASE_SCOPE} ${DEFAULT_SLIDE},
 ${BASE_SCOPE} .vertical-slide {
@@ -86,6 +94,24 @@ ${BASE_SCOPE} .vertical-slide {
     });
   }
 
+  function ensureViewport(track) {
+    const parent = track.parentElement;
+    if (
+      parent &&
+      parent.classList &&
+      parent.classList.contains(VIEWPORT_CLASS)
+    ) {
+      return parent;
+    }
+    const wrapper = document.createElement("div");
+    wrapper.className = VIEWPORT_CLASS;
+    if (parent) {
+      parent.insertBefore(wrapper, track);
+    }
+    wrapper.appendChild(track);
+    return wrapper;
+  }
+
   function initScopes(scopes) {
     const gsap = window.gsap;
     if (!gsap) return;
@@ -103,6 +129,7 @@ ${BASE_SCOPE} .vertical-slide {
         : scope.querySelector(trackSelector) || scope.querySelector(".vertical-scroll-track");
       if (!track) return;
 
+      const viewport = ensureViewport(track);
       const slides = Array.from(track.querySelectorAll(slideSelector));
       if (slides.length < 2) return;
 
@@ -129,8 +156,6 @@ ${BASE_SCOPE} .vertical-slide {
         scope.style.setProperty("max-width", "100%", "important");
         scope.style.setProperty("position", "relative", "important");
         scope.style.setProperty("display", "block", "important");
-        scope.style.setProperty("overflow", "hidden", "important");
-        scope.style.setProperty("touch-action", "none", "important");
       }
       applyScopeState();
       const scopeWatcher = new MutationObserver((mutations) => {
@@ -141,10 +166,28 @@ ${BASE_SCOPE} .vertical-slide {
       });
       scopeWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
 
+      function applyViewportState() {
+        viewport.style.setProperty("position", "relative", "important");
+        viewport.style.setProperty("overflow", "hidden", "important");
+        viewport.style.setProperty("width", "100%", "important");
+        viewport.style.setProperty("display", "block", "important");
+      }
+      applyViewportState();
+      const viewportWatcher = new MutationObserver((mutations) => {
+        const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
+        if (needsUpdate) {
+          applyViewportState();
+        }
+      });
+      viewportWatcher.observe(viewport, { attributes: true, attributeFilter: ["style"] });
+
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
 
       function applyTrackState() {
-        track.style.setProperty("position", "relative", "important");
+        track.style.setProperty("position", "absolute", "important");
+        track.style.setProperty("top", "0", "important");
+        track.style.setProperty("left", "0", "important");
+        track.style.setProperty("right", "0", "important");
         track.style.setProperty("display", "flex", "important");
         track.style.setProperty("flex-direction", "column", "important");
         track.style.setProperty("width", "100%", "important");
@@ -207,14 +250,15 @@ ${BASE_SCOPE} .vertical-slide {
             scope.offsetHeight ||
             0;
         }
-        const targetHeight = hasFixedSlideHeight && declaredSlideHeight
-          ? declaredSlideHeight
-          : maxHeight > 0
-          ? `${maxHeight}px`
-          : "";
+        const targetHeight =
+          hasFixedSlideHeight && declaredSlideHeight
+            ? declaredSlideHeight
+            : maxHeight > 0
+            ? `${maxHeight}px`
+            : "";
         if (targetHeight) {
-          scope.style.setProperty("height", targetHeight, "important");
-          scope.style.setProperty("min-height", targetHeight, "important");
+          viewport.style.setProperty("height", targetHeight, "important");
+          viewport.style.setProperty("min-height", targetHeight, "important");
         }
       }
 
