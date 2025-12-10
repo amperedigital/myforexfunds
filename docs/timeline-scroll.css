@@ -18,12 +18,13 @@
 .section-timeline .timeline-wrapper.is-dragging {
   cursor: grabbing;
 }
-
 .section-timeline .timeline-container {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 1.5rem;
   min-width: max-content;
+  padding-bottom: 2rem;
 }
 
 .section-timeline .timeline-line {
