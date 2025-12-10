@@ -93,7 +93,12 @@
         scope.style.setProperty("overflow", "hidden", "important");
         scope.style.setProperty("height", slideHeight, "important");
         scope.style.setProperty("max-height", slideHeight, "important");
+        scope.style.setProperty("width", "100%", "important");
+        scope.style.setProperty("max-width", "100%", "important");
         scope.style.setProperty("--vertical-scroll-slide-height", slideHeight);
+        scope.style.setProperty("position", "relative", "important");
+        scope.style.setProperty("display", "block", "important");
+        scope.style.setProperty("touch-action", "none", "important");
       }
       applyScopeState();
       const scopeWatcher = new MutationObserver((mutations) => {
@@ -104,8 +109,6 @@
       });
       scopeWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
 
-      scope.style.position = scope.style.position || "relative";
-      scope.style.touchAction = scope.style.touchAction || "none";
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
 
       function applyTrackState() {
@@ -118,6 +121,7 @@
         track.style.setProperty("flex-direction", "column", "important");
         track.style.setProperty("width", "100%", "important");
         track.style.setProperty("height", "100%", "important");
+        track.style.setProperty("pointer-events", "auto", "important");
         track.style.setProperty("will-change", "transform");
         if (!track.style.transform) {
           track.style.transform = "translate3d(0, 0, 0)";
