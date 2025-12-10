@@ -87,37 +87,51 @@
       const wheelThreshold = toNumber(dataset.scrollWheelThreshold, 10);
       const swipeThreshold = toNumber(dataset.scrollSwipeThreshold, 50);
 
-      function applyOverflowState() {
+      function applyScopeState() {
         scope.style.setProperty("overflow-y", "hidden", "important");
         scope.style.setProperty("overflow-x", "hidden", "important");
         scope.style.setProperty("overflow", "hidden", "important");
+        scope.style.setProperty("height", slideHeight, "important");
+        scope.style.setProperty("max-height", slideHeight, "important");
+        scope.style.setProperty("--vertical-scroll-slide-height", slideHeight);
       }
-      applyOverflowState();
-      const overflowWatcher = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.attributeName === "style") {
-            applyOverflowState();
-          }
-        });
+      applyScopeState();
+      const scopeWatcher = new MutationObserver((mutations) => {
+        const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
+        if (needsUpdate) {
+          applyScopeState();
+        }
       });
-      overflowWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
+      scopeWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
 
       scope.style.position = scope.style.position || "relative";
       scope.style.touchAction = scope.style.touchAction || "none";
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
-      if (!scope.style.height || scope.style.height === "auto") {
-        scope.style.height = slideHeight;
-      }
 
-      track.style.display = track.style.display || "flex";
-      track.style.flexDirection = track.style.flexDirection || "column";
-      track.style.willChange = track.style.willChange || "transform";
-      track.style.transform = track.style.transform || "translate3d(0, 0, 0)";
+      function applyTrackState() {
+        track.style.setProperty("display", "flex", "important");
+        track.style.setProperty("flex-direction", "column", "important");
+        track.style.setProperty("width", "100%", "important");
+        track.style.setProperty("height", "100%", "important");
+        track.style.setProperty("will-change", "transform");
+        if (!track.style.transform) {
+          track.style.transform = "translate3d(0, 0, 0)";
+        }
+      }
+      applyTrackState();
+      const trackWatcher = new MutationObserver((mutations) => {
+        const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
+        if (needsUpdate) {
+          applyTrackState();
+        }
+      });
+      trackWatcher.observe(track, { attributes: true, attributeFilter: ["style"] });
 
       slides.forEach((slide) => {
-        if (!slide.style.flex) slide.style.flex = `0 0 ${slideHeight}`;
-        if (!slide.style.minHeight) slide.style.minHeight = slideHeight;
-        if (!slide.style.width) slide.style.width = "100%";
+        slide.style.setProperty("flex", `0 0 ${slideHeight}`, "important");
+        slide.style.setProperty("min-height", slideHeight, "important");
+        slide.style.setProperty("height", slideHeight, "important");
+        slide.style.setProperty("width", "100%", "important");
       });
 
       let activeIndex = clampIndex(dataset.scrollStartIndex, slides.length - 1);
