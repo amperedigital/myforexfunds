@@ -53,15 +53,6 @@
     const durationSeconds = dataset.scrollDuration ? Number(dataset.scrollDuration) : 0.85;
     const wheelEnabled = dataset.scrollWheel !== "false";
     const lockWheel = dataset.scrollLock === "true" && !isTouch;
-    const explicitStartIndex = Number.parseInt(dataset.scrollStartIndex || "", 10);
-    const detectedActiveIndex = slides.findIndex(
-      (slide) => slide.hasAttribute("data-slide-active") || slide.classList.contains("is-active")
-    );
-    const startIndex = Number.isFinite(explicitStartIndex)
-      ? explicitStartIndex
-      : detectedActiveIndex >= 0
-      ? detectedActiveIndex
-      : 0;
 
     scope.classList.add("hero-vertical-swiper", "swiper");
     scope.style.setProperty("width", "100%", "important");
@@ -92,7 +83,6 @@
       direction: "vertical",
       slidesPerView: 1,
       loop: dataset.scrollLoop === "true",
-      initialSlide: startIndex,
       speed: Number.isFinite(durationSeconds) ? durationSeconds * 1000 : 850,
       allowTouchMove: dataset.scrollTouch !== "false",
       cssMode: false,
