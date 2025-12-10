@@ -92,11 +92,8 @@
     const isTouch = hasTouch();
 
     const explicitStartIndex = Number.parseInt(dataset.scrollStartIndex || "", 10);
-    const detectedActiveIndex = slides.findIndex(
-      (slide) => slide.hasAttribute("data-slide-active") || slide.classList.contains("is-active")
-    );
     const startIndex = Number.isFinite(explicitStartIndex)
-      ? Math.max(0, explicitStartIndex)
+      ? clampIndex(explicitStartIndex, slides.length - 1)
       : 0;
 
     scope.classList.add("hero-vertical-swiper", "swiper");
@@ -109,6 +106,16 @@
 
     const nextBtn = scope.querySelector(NEXT_SELECTOR);
     const prevBtn = scope.querySelector(PREV_SELECTOR);
+
+    slides.forEach((slide, idx) => {
+      if (idx === startIndex) {
+        slide.classList.add("is-active");
+        slide.setAttribute("data-slide-active", "");
+      } else {
+        slide.classList.remove("is-active");
+        slide.removeAttribute("data-slide-active");
+      }
+    });
 
     const swiper = new Swiper(scope, {
       direction: "vertical",
@@ -167,9 +174,9 @@
           if (!scope.contains(event.target) || Math.abs(event.deltaY) < 2) return;
           if (lockWheel && event.cancelable) event.preventDefault();
           if (!wheelEnabled) return;
-          event.preventDefault();
-          if (event.deltaY > 0) swiper.slidePrev();
-          else swiper.slideNext();
+          if (event.cancelable) event.preventDefault();
+          if (event.deltaY > 0) swiper.slideNext();
+          else swiper.slidePrev();
         },
         { passive: false }
       );
