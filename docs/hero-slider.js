@@ -1,224 +1,299 @@
-(function heroTimelineController() {
-  function init() {
-    const sliderSelector = '.timeline-slider';
-    const cardSelector = '.hero-card-slide';
-    const panelSelector = '.hero-card-list-wrapper';
-    const footerSelector = '.hero-card-footer';
-    const navSelector = '.swiper-button-next, .swiper-button-prev, .swiper-pagination-bullet';
+(function heroSliderInit() {
+  if (typeof Swiper === "undefined") return;
 
-    const sliderEl = document.querySelector(sliderSelector);
-    if (!sliderEl || typeof Swiper === 'undefined') {
-      console.warn('[hero-slider] slider element or Swiper missing.');
-      return;
-    }
+  const sliderSelector = ".timeline-slider";
+  const targetAttr = "data-hero-slider";
+  const cardSelector = ".hero-card-slide";
+  const panelSelector = ".hero-card-list-wrapper";
+  const footerSelector = ".hero-card-footer";
 
-    console.log('[hero-slider] initializing controller');
+  const attrMatches = Array.from(document.querySelectorAll(`[${targetAttr}]`));
+  const fallback = !attrMatches.length ? document.querySelector(sliderSelector) : null;
+  const sliderEls = attrMatches.length ? attrMatches : fallback ? [fallback] : [];
+  if (!sliderEls.length) return;
 
-    const scope = sliderEl.closest('.timeline-tabs') || document;
-    const breakpoint = window.matchMedia('(max-width: 767px)');
-    let swiperInstance = null;
-    let frozenTranslate = null;
-    let isFrozen = false;
-    let isPointerDown = false;
+  const breakpoint = window.matchMedia("(max-width: 767px)");
+  const instances = sliderEls.map((sliderEl) => createHeroSlider(sliderEl));
+
+  let pendingReload = false;
+  const mqHandler = () => {
+    if (pendingReload) return;
+    pendingReload = true;
+    window.location.reload();
+  };
+
+  if (breakpoint.addEventListener) {
+    breakpoint.addEventListener("change", mqHandler);
+  } else {
+    breakpoint.addListener(mqHandler);
+  }
+
+  function createHeroSlider(sliderEl) {
+    if (!sliderEl) return null;
+    let current = null;
 
     function panelLooksOpen(panel) {
       if (!panel) return false;
-      const state = panel.dataset.state || panel.dataset.open;
-      if (state === 'open' || state === 'true') return true;
-      if (panel.classList.contains('is-open') || panel.classList.contains('w--open')) return true;
-      const inlineHeight = parseFloat(panel.style.height || panel.style.maxHeight || '0');
-      if (!Number.isNaN(inlineHeight) && inlineHeight > 4) return true;
-      const inlineWidth = parseFloat(panel.style.width || panel.style.maxWidth || '0');
-      if (!Number.isNaN(inlineWidth) && inlineWidth > 4) return true;
+      if (
+        panel.dataset.state === "open" ||
+        panel.dataset.open === "true" ||
+        panel.getAttribute("aria-expanded") === "true" ||
+        panel.getAttribute("aria-hidden") === "false" ||
+        panel.classList.contains("is-open") ||
+        panel.classList.contains("is-active") ||
+        panel.classList.contains("w--open")
+      ) {
+        return true;
+      }
+
+      const inlineHeight = parseFloat(panel.style.height || panel.style.maxHeight || "0");
+      if (!Number.isNaN(inlineHeight) && inlineHeight > 4) {
+        return true;
+      }
+
       const rect = panel.getBoundingClientRect();
-      return rect.height > 4;
+      const computedHeight = rect.height || parseFloat(getComputedStyle(panel).height) || 0;
+      return computedHeight > 4;
     }
 
-    function slideLooksOpen(slide) {
-      if (!slide) return false;
-      if (slide.dataset.state === 'open' || slide.dataset.open === 'true') return true;
-      if (slide.classList.contains('is-open') || slide.classList.contains('w--open')) return true;
-      return panelLooksOpen(slide.querySelector(panelSelector));
-    }
-
-    function collectOpenSlides() {
-      return Array.from(sliderEl.querySelectorAll(cardSelector)).filter(slideLooksOpen);
-    }
-
-    function lockSliderHeight(duration) {
-      const height = sliderEl?.getBoundingClientRect?.().height || 0;
-      if (height <= 0) return;
-      sliderEl.style.minHeight = `${height}px`;
-      setTimeout(() => sliderEl.style.removeProperty('min-height'), duration);
-    }
-
-    function freezeSwiper(lockTranslate = true) {
-      if (!swiperInstance?.autoplay?.running) return;
-      if (lockTranslate) {
-        frozenTranslate = swiperInstance.getTranslate();
-        swiperInstance.setTransition(0);
-        swiperInstance.setTranslate(frozenTranslate);
-      } else {
-        frozenTranslate = null;
+    function slideLooksOpen(slideEl) {
+      if (!slideEl) return false;
+      if (
+        slideEl.dataset.state === "open" ||
+        slideEl.dataset.open === "true" ||
+        slideEl.getAttribute("aria-expanded") === "true" ||
+        slideEl.classList.contains("is-open") ||
+        slideEl.classList.contains("is-active") ||
+        slideEl.classList.contains("w--open")
+      ) {
+        return true;
       }
-      swiperInstance.autoplay.stop();
-      isFrozen = true;
+      return panelLooksOpen(slideEl.querySelector(panelSelector));
     }
 
-    function resumeSwiper() {
-      if (!swiperInstance?.autoplay || swiperInstance.autoplay.running) return;
-      swiperInstance.setTransition(swiperInstance.params.speed);
-      if (frozenTranslate !== null) {
-        swiperInstance.setTranslate(frozenTranslate);
-      }
-      swiperInstance.autoplay.start();
-      isFrozen = false;
-      frozenTranslate = null;
+    function collectCardState() {
+      const slides = sliderEl.querySelectorAll(cardSelector);
+      const openSlides = [];
+      slides.forEach((slide) => {
+        if (slideLooksOpen(slide)) openSlides.push(slide);
+      });
+      return { anyOpen: openSlides.length > 0, openSlides };
     }
 
-    function syncPlaybackState(source) {
-      if (breakpoint.matches) return;
-      const openSlides = collectOpenSlides();
-      if (isPointerDown || sliderEl.matches(':hover') || openSlides.length) {
-        freezeSwiper(!isPointerDown);
-      } else if (isFrozen) {
-        resumeSwiper();
-      }
-    }
-
-    function createSwiper(mode) {
-      if (swiperInstance) {
-        swiperInstance.destroy(true, true);
-      }
-
-      swiperInstance = new Swiper(sliderSelector, {
-        slidesPerView: mode === 'mobile' ? 1 : 'auto',
-        spaceBetween: 12,
+    function createSlider(isMobileMode) {
+      const swiper = new Swiper(sliderEl, {
+        slidesPerView: "auto",
+        spaceBetween: 0,
+        overflow: "visible",
         allowTouchMove: true,
-        loop: mode !== 'mobile',
-        speed: mode === 'mobile' ? 800 : 4000,
-        autoplay:
-          mode === 'mobile'
-            ? false
-            : {
-                delay: 3000,
-                disableOnInteraction: false,
-                pauseOnMouseEnter: false,
-              },
+        autoplay: isMobileMode
+          ? false
+          : {
+              delay: 3000,
+              disableOnInteraction: false,
+              pauseOnMouseEnter: false,
+            },
+        speed: isMobileMode ? 800 : 4000,
+        loop: !isMobileMode,
+        rewind: isMobileMode,
         pagination: {
-          el: '.swiper-pagination',
+          el: ".swiper-pagination",
           clickable: true,
         },
         navigation: {
-          nextEl: '.swiper-button-next',
-          prevEl: '.swiper-button-prev',
+          nextEl: ".swiper-button-next",
+          prevEl: ".swiper-button-prev",
         },
       });
 
-      swiperInstance.on('slideChangeTransitionStart', () => lockSliderHeight(600));
-      swiperInstance.on('touchStart', () => {
-        isPointerDown = true;
-        freezeSwiper(false);
-      });
-      swiperInstance.on('touchEnd', () => {
-        isPointerDown = false;
-        syncPlaybackState('touchEnd');
-      });
-    }
+      let isHovered = sliderEl.matches(":hover");
+      let isPointerDown = false;
+      let frozenTranslate = null;
+      let suppressFooterChain = false;
+      const cleanupFns = [];
 
-    function applyMode() {
-      const mode = breakpoint.matches ? 'mobile' : 'desktop';
-      createSwiper(mode);
-      if (mode === 'desktop') {
-        syncPlaybackState('mode-change');
+      function freezeSwiper() {
+        if (isMobileMode || !swiper?.autoplay?.running) return;
+        frozenTranslate = swiper.getTranslate();
+        swiper.autoplay.stop();
+        swiper.setTransition(0);
+        swiper.setTranslate(frozenTranslate);
       }
-    }
 
-    applyMode();
+      function resumeSwiper() {
+        if (isMobileMode || !swiper?.autoplay || swiper.autoplay.running) return;
+        swiper.setTransition(swiper.params.speed);
+        if (frozenTranslate !== null) {
+          swiper.setTranslate(frozenTranslate);
+        }
+        swiper.autoplay.start();
+        frozenTranslate = null;
+      }
 
-    if (breakpoint.addEventListener) {
-      breakpoint.addEventListener('change', applyMode);
-    } else {
-      breakpoint.addListener(applyMode);
-    }
+      function syncPlaybackState(reason) {
+        const { anyOpen } = collectCardState();
+        if (isMobileMode) return;
+        if (isHovered || isPointerDown || anyOpen) {
+          freezeSwiper();
+        } else {
+          resumeSwiper();
+        }
+      }
 
-    sliderEl.addEventListener('mouseenter', () => {
-      console.log('[hero-slider] hover enter');
-      syncPlaybackState('hover-enter');
-    });
-    sliderEl.addEventListener('mouseleave', () => {
-      console.log('[hero-slider] hover leave');
-      syncPlaybackState('hover-leave');
-    });
+      function triggerFooterToggle(slideEl) {
+        if (!slideEl) return;
+        const footer = slideEl.querySelector(footerSelector);
+        if (!footer) return;
+        const interactiveTarget =
+          footer.querySelector("button, [role='button'], [data-w-id]") || footer;
+        interactiveTarget.dispatchEvent(
+          new MouseEvent("click", { bubbles: true, cancelable: true })
+        );
+      }
 
-    if (window.MutationObserver) {
-      const observer = new MutationObserver(() => syncPlaybackState('mutation'));
-      observer.observe(sliderEl, {
-        attributes: true,
-        childList: true,
-        subtree: true,
-        attributeFilter: ['class', 'style', 'data-state', 'data-open', 'aria-expanded', 'aria-hidden'],
-      });
-    }
-
-    setInterval(() => syncPlaybackState('interval'), 800);
-
-    // Single-open enforcement (mimics timeline-tabs helper)
-    (function initSingleOpen(scopeElement) {
-      if (!scopeElement) return;
-      let suppress = false;
-
-      function closeSlides(exceptSlide) {
-        suppress = true;
-        const openSlides = collectOpenSlides();
-        console.log('[hero-slider] closeSlides: found open slides', openSlides);
-        openSlides
-          .filter((slide) => !exceptSlide || slide !== exceptSlide)
-          .forEach((slide) => {
-            const panel = slide.querySelector(panelSelector);
-            if (!panel || panelLooksOpen(panel) === false) return;
-            const footer = slide.querySelector(footerSelector);
-            if (!footer) return;
-            const trigger =
-              footer.querySelector('button, [role="button"], [data-w-id], [data-trigger="card-footer"]') || footer;
-            trigger.dataset.heroSingleOpen = 'true';
-            trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-            console.log('[hero-slider] dispatching close for slide', slide);
+      if (isMobileMode) {
+        const mobileClickHandler = () => {
+          const { openSlides } = collectCardState();
+          if (openSlides.length <= 1) return;
+          const latest = openSlides[openSlides.length - 1];
+          const others = openSlides.filter((slide) => slide !== latest);
+          suppressFooterChain = true;
+          others.forEach((slide) => triggerFooterToggle(slide));
+          requestAnimationFrame(() => {
+            suppressFooterChain = false;
+            syncPlaybackState("mobile-enforce");
           });
+        };
+        sliderEl.addEventListener("click", mobileClickHandler);
+        cleanupFns.push(() => sliderEl.removeEventListener("click", mobileClickHandler));
+      }
+
+      const hoverEnter = () => {
+        isHovered = true;
+        syncPlaybackState("hover-enter");
+      };
+      const hoverLeave = () => {
+        isHovered = false;
+        syncPlaybackState("hover-leave");
+      };
+      sliderEl.addEventListener("mouseenter", hoverEnter);
+      sliderEl.addEventListener("mouseleave", hoverLeave);
+      cleanupFns.push(() => {
+        sliderEl.removeEventListener("mouseenter", hoverEnter);
+        sliderEl.removeEventListener("mouseleave", hoverLeave);
+      });
+
+      const footerHandler = (event) => {
+        const footer = event.target.closest(footerSelector);
+        if (!footer || !sliderEl.contains(footer) || suppressFooterChain) return;
+
+        const activeSlide = footer.closest(cardSelector);
+        if (!activeSlide) return;
+
+        freezeSwiper();
+
         requestAnimationFrame(() => {
-          suppress = false;
-          syncPlaybackState('single-open');
+          const { openSlides } = collectCardState();
+          const otherOpenSlides = openSlides.filter((slide) => slide !== activeSlide);
+          if (!otherOpenSlides.length) {
+            syncPlaybackState("footer-no-change");
+            return;
+          }
+
+          suppressFooterChain = true;
+          otherOpenSlides.forEach((slide) => triggerFooterToggle(slide));
+          setTimeout(() => {
+            suppressFooterChain = false;
+            syncPlaybackState("footer-auto-close");
+          }, 0);
+        });
+      };
+      sliderEl.addEventListener("click", footerHandler, true);
+      cleanupFns.push(() => sliderEl.removeEventListener("click", footerHandler, true));
+
+      if (!isMobileMode) {
+        const pointerDown = () => {
+          isPointerDown = true;
+          freezeSwiper();
+        };
+        const pointerRelease = () => {
+          if (!isPointerDown) return;
+          isPointerDown = false;
+          syncPlaybackState("pointer-release");
+        };
+        sliderEl.addEventListener("pointerdown", pointerDown);
+        sliderEl.addEventListener("pointerup", pointerRelease);
+        sliderEl.addEventListener("pointercancel", pointerRelease);
+        sliderEl.addEventListener("pointerleave", (evt) => {
+          if (evt.pointerType === "mouse") {
+            pointerRelease();
+          }
+        });
+        cleanupFns.push(() => {
+          sliderEl.removeEventListener("pointerdown", pointerDown);
+          sliderEl.removeEventListener("pointerup", pointerRelease);
+          sliderEl.removeEventListener("pointercancel", pointerRelease);
+          sliderEl.removeEventListener("pointerleave", pointerRelease);
         });
       }
 
-      scopeElement.addEventListener(
-        'click',
-        (event) => {
-          if (suppress) return;
-          const navBtn = event.target.closest(navSelector);
-          if (navBtn && scopeElement.contains(navBtn)) {
-            requestAnimationFrame(() => closeSlides());
+      const MutationObserverCtor =
+        window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
+      if (MutationObserverCtor) {
+        const observer = new MutationObserverCtor(() => {
+          syncPlaybackState("mutation");
+        });
+        observer.observe(sliderEl, {
+          attributes: true,
+          childList: true,
+          subtree: true,
+          attributeFilter: ["class", "style", "data-state", "data-open", "aria-expanded", "aria-hidden"],
+        });
+        cleanupFns.push(() => observer.disconnect());
+      }
+
+      let intervalId = null;
+      if (!isMobileMode) {
+        intervalId = setInterval(() => {
+          if (!document.body.contains(sliderEl)) {
+            clearInterval(intervalId);
             return;
           }
-          const footer = event.target.closest(footerSelector);
-          if (!footer || !scopeElement.contains(footer)) return;
-          const slide = footer.closest(cardSelector);
-          if (!slide) return;
-          let trigger = footer.querySelector('button, [role="button"], [data-w-id], [data-trigger="card-footer"]') || footer;
-          if (trigger.dataset.heroSingleOpen === 'true') {
-            delete trigger.dataset.heroSingleOpen;
-            return;
-          }
-          requestAnimationFrame(() => closeSlides(slide));
+          syncPlaybackState("interval");
+        }, 600);
+        cleanupFns.push(() => clearInterval(intervalId));
+      }
+
+      syncPlaybackState("initial");
+
+      return {
+        swiper,
+        cleanup() {
+          cleanupFns.forEach((fn) => fn());
         },
-        true
-      );
-    })(scope);
+      };
+    }
+
+    function applyMode(isMobileMode) {
+      if (current) {
+        current.cleanup?.();
+        current.swiper?.destroy(true, true);
+      }
+      current = createSlider(isMobileMode);
+    }
+
+    applyMode(breakpoint.matches);
+
+    return {
+      destroy() {
+        current?.cleanup?.();
+        current?.swiper?.destroy(true, true);
+        current = null;
+      },
+    };
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init, { once: true });
-  } else {
-    init();
-  }
+  return () => {
+    instances.forEach((instance) => instance?.destroy?.());
+  };
 })();
