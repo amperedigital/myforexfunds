@@ -81,6 +81,8 @@
     const autoplayEnabled = autoplayDelay > 0;
     const autoplayStartDelay =
       dataset.scrollDelay != null ? Number.parseInt(dataset.scrollDelay, 10) || 0 : null;
+    const autoplayDirectionAttr = (dataset.scrollAutoplayDirection || "").toLowerCase();
+    const autoplayReverse = autoplayDirectionAttr === "forward" ? false : true;
     const durationSeconds = parseDuration(dataset.scrollDuration, 0.85);
     const wheelEnabled = dataset.scrollWheel !== "false";
     const lockWheel = dataset.scrollLock === "true";
@@ -124,6 +126,7 @@
             delay: Math.max(100, autoplayDelay),
             disableOnInteraction: false,
             pauseOnMouseEnter: true,
+            reverseDirection: autoplayReverse,
           }
         : false,
       mousewheel: wheelEnabled
@@ -169,12 +172,10 @@
         "wheel",
         (event) => {
           if (!scope.contains(event.target) || Math.abs(event.deltaY) < 2) return;
-          event.preventDefault();
-          if (!scope.contains(event.target)) return;
-          if (lockWheel && event.cancelable) event.preventDefault();
+          if (event.cancelable) event.preventDefault();
           if (!wheelEnabled) return;
-          if (event.deltaY > 0) swiper.slideNext();
-          else swiper.slidePrev();
+          if (event.deltaY > 0) swiper.slidePrev();
+          else swiper.slideNext();
         },
         { passive: false }
       );
