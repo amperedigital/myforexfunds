@@ -128,16 +128,27 @@ ${BASE_SCOPE} .vertical-slide {
 
       let storedVisibility = "";
       let storedOpacity = "";
+      const cloakTimeoutMs = toNumber(dataset.scrollCloakTimeout, 2000);
+      let cloakTimeoutId = null;
       if (shouldCloak) {
         storedVisibility = scope.style.visibility || "";
         storedOpacity = scope.style.opacity || "";
         scope.style.visibility = "hidden";
         scope.style.opacity = "0";
+        const timeout = Math.max(0, cloakTimeoutMs || 0);
+        cloakTimeoutId = window.setTimeout(() => {
+          cloakTimeoutId = null;
+          revealScope();
+        }, timeout);
       }
 
       function revealScope() {
         if (!shouldCloak || scope.__scrollCloakRevealed) return;
         scope.__scrollCloakRevealed = true;
+        if (cloakTimeoutId) {
+          clearTimeout(cloakTimeoutId);
+          cloakTimeoutId = null;
+        }
         if (storedVisibility) scope.style.visibility = storedVisibility;
         else scope.style.removeProperty("visibility");
         if (storedOpacity) scope.style.opacity = storedOpacity;
