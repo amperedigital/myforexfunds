@@ -632,7 +632,6 @@ ${BASE_SCOPE} .vertical-slide {
       });
 
       setImmediate(activeIndex);
-      scheduleAutoplay();
     });
   }
 
