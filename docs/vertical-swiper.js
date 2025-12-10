@@ -131,6 +131,7 @@
             enabled: true,
             forceToAxis: true,
             releaseOnEdges: true,
+            invert: true,
           }
         : false,
       keyboard: {
