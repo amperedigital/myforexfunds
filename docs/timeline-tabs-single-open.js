@@ -8,8 +8,9 @@
  *   3. If your classes differ, update the selectors below before embedding.
  */
 (function timelineTabsSingleCard(scopeSelector = ".timeline-tabs") {
-  const scopes = document.querySelectorAll(scopeSelector);
-  if (!scopes.length) return;
+  function init() {
+    const scopes = document.querySelectorAll(scopeSelector);
+    if (!scopes.length) return;
 
   const cardSelector = ".timeline-slide-card, .hero-card-slide";
   const panelSelector = ".timeline-card-list-wrapper, .hero-card-list-wrapper";
@@ -127,4 +128,11 @@
       );
     });
   });
+  }
+
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    init();
+  } else {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  }
 })();
