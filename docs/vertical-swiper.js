@@ -111,14 +111,14 @@
     const swiper = new Swiper(scope, {
       direction: "vertical",
       slidesPerView: 1,
-      loop: loopSlides,
+      loop: false,
+      rewind: true,
       initialSlide: clampIndex(startIndex, slides.length - 1),
       speed: durationSeconds * 1000,
       allowTouchMove: touchEnabled,
       resistanceRatio: 0.85,
       threshold: 12,
       autoHeight: false,
-      rewind: !loopSlides,
       autoplay: autoplayEnabled
         ? {
             delay: Math.max(100, autoplayDelay),
@@ -148,11 +148,7 @@
       on: {
         init(swiperInstance) {
           const targetIndex = clampIndex(startIndex, slides.length - 1);
-          if (loopSlides && swiperInstance.slideToLoop) {
-            swiperInstance.slideToLoop(targetIndex, 0, false);
-          } else {
-            swiperInstance.slideTo(targetIndex, 0, false);
-          }
+          swiperInstance.slideTo(targetIndex, 0, false);
           scope.classList.add("is-ready");
           if (autoplayEnabled && autoplayStartDelay && swiperInstance.autoplay) {
             swiperInstance.autoplay.stop();
@@ -178,19 +174,6 @@
         { passive: false }
       );
     }
-    if (wheelEnabled && !lockWheel) {
-      scope.addEventListener(
-        "wheel",
-        (event) => {
-          if (!scope.contains(event.target) || Math.abs(event.deltaY) < 2) return;
-          event.preventDefault();
-          if (event.deltaY > 0) swiper.slideNext();
-          else swiper.slidePrev();
-        },
-        { passive: false }
-      );
-    }
-
     scope.addEventListener(
       "click",
       (event) => {
@@ -198,11 +181,7 @@
         if (!btn || btn.closest(SCOPE_SELECTOR) !== scope) return;
         event.preventDefault();
         const targetIndex = clampIndex(btn.dataset.scrollTo, slides.length - 1);
-        if (loopSlides && swiper.slideToLoop) {
-          swiper.slideToLoop(targetIndex);
-        } else {
-          swiper.slideTo(targetIndex);
-        }
+        swiper.slideTo(targetIndex);
       },
       true
     );
