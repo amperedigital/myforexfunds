@@ -209,6 +209,11 @@
 
         requestAnimationFrame(() => {
           const { openSlides } = collectCardState();
+          if (openSlides.length === 1 && openSlides[0] === activeSlide) {
+            console.log("[hero-slider] only active slide open, skipping auto-close");
+            syncPlaybackState("only-slide-open");
+            return;
+          }
           const otherOpenSlides = openSlides.filter((slide) => slide !== activeSlide);
           if (!otherOpenSlides.length) {
             syncPlaybackState("footer-no-change");
