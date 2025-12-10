@@ -195,6 +195,10 @@
         const activeSlide = footer.closest(cardSelector);
         if (!activeSlide) return;
 
+        console.log("[hero-slider] footer click", {
+          currentOpen: collectCardState().openSlides.length,
+          slideIndex: Array.from(sliderEl.querySelectorAll(cardSelector)).indexOf(activeSlide),
+        });
         freezeSwiper();
 
         requestAnimationFrame(() => {
@@ -204,12 +208,13 @@
             syncPlaybackState("footer-no-change");
             return;
           }
-
+          console.log("[hero-slider] closing other slides", otherOpenSlides.length);
           suppressFooterChain = true;
           otherOpenSlides.forEach((slide) => triggerFooterToggle(slide));
           setTimeout(() => {
             suppressFooterChain = false;
             syncPlaybackState("footer-auto-close");
+            console.log("[hero-slider] other slides closed");
           }, 0);
         });
       };
