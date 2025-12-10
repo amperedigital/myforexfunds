@@ -56,7 +56,11 @@
 
     scope.classList.add("hero-vertical-swiper", "swiper");
     track.classList.add("swiper-wrapper");
-    slides.forEach((slide) => slide.classList.add("swiper-slide"));
+    slides.forEach((slide) => {
+      slide.classList.add("swiper-slide");
+      slide.style.setProperty("width", "100%", "important");
+      slide.style.setProperty("flex", "0 0 auto", "important");
+    });
 
     const nextEl = scope.querySelector(NEXT_SELECTOR);
     const prevEl = scope.querySelector(PREV_SELECTOR);
@@ -67,6 +71,7 @@
       loop: dataset.scrollLoop === "true",
       speed: Number.isFinite(durationSeconds) ? durationSeconds * 1000 : 850,
       allowTouchMove: dataset.scrollTouch !== "false",
+      cssMode: false,
       resistanceRatio: 0.85,
       threshold: 12,
       autoHeight: false,
