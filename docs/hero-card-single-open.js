@@ -1,221 +1,127 @@
 /**
- * Hero / Timeline Card helper
- * Keeps Webflow-controlled cards in Swiper sliders to a single open panel.
- * - Works with `.hero-card-slide` + `.timeline-slide-card` markup
- * - Respects Webflow interactions by dispatching click events on footers
- * - Closes cards automatically when nav buttons or pointer dragging occur
+ * Single-open helper for Swiper/Webflow hero cards.
+ * Mirrors the working implementation on mff-story but extends selectors so it
+ * can run on hero sliders that use `.hero-card-*` classes.
  */
-(function heroCardSingleOpen() {
-  const sliderSelector = ".timeline-slider, .hero-card-slider, [data-single-open-slider]";
-  const slideSelector = ".hero-card-slide, .timeline-slide-card";
-  const panelSelector = ".hero-card-list-wrapper, .timeline-card-list-wrapper";
-  const footerSelector = ".hero-card-footer, .timeline-card-footer";
-  const customTriggerSelector = "[data-card-trigger], [data-slide-trigger]";
+(function heroCardSingleOpen(config = {}) {
+  const scopeSelector = config.scopeSelector || ".timeline-tabs, [data-single-open-scope]";
+  const cardSelector = config.cardSelector || ".hero-card-slide, .timeline-slide-card";
+  const panelSelector = config.panelSelector || ".hero-card-list-wrapper, .timeline-card-list-wrapper";
+  const footerSelector = config.footerSelector || ".hero-card-footer, .timeline-card-footer";
   const navSelector =
-    ".swiper-button-prev, .swiper-button-next, .swiper-pagination-bullet, .w-slider-arrow-left, .w-slider-arrow-right, .w-slider-dot, [data-scroll-prev], [data-scroll-next]";
+    config.navSelector ||
+    ".swiper-button-next, .swiper-button-prev, .swiper-pagination-bullet, .w-slider-arrow-left, .w-slider-arrow-right, .w-slider-dot";
+  const sliderSelector = config.sliderSelector || ".timeline-slider";
 
-  const managedSliders = new WeakSet();
-  const sliderObservers = new WeakMap();
-  const closingSlides = new WeakMap();
-
-  function stopMonitoringClose(slide) {
-    if (!closingSlides.has(slide)) return;
-    const rafId = closingSlides.get(slide);
-    if (typeof rafId === "number") {
-      cancelAnimationFrame(rafId);
-    }
-    closingSlides.delete(slide);
-  }
-
-  function monitorClosing(slide) {
-    if (!slide || closingSlides.has(slide)) return;
-    const tick = () => {
-      if (!document.body.contains(slide)) {
-        stopMonitoringClose(slide);
-        return;
-      }
-      const panel = slide.querySelector(panelSelector);
-      if (!looksOpen(panel)) {
-        stopMonitoringClose(slide);
-        return;
-      }
-      const rafId = requestAnimationFrame(tick);
-      closingSlides.set(slide, rafId);
-    };
-    const rafId = requestAnimationFrame(tick);
-    closingSlides.set(slide, rafId);
-  }
+  const scopes = Array.from(document.querySelectorAll(scopeSelector));
+  if (!scopes.length) return;
 
   function looksOpen(panel) {
     if (!panel) return false;
-
     const state = panel.dataset.state || panel.dataset.open;
     if (state === "open" || state === "true") return true;
-
-    const ariaExpanded = panel.getAttribute("aria-expanded");
-    if (ariaExpanded === "true") return true;
-    const ariaHidden = panel.getAttribute("aria-hidden");
-    if (ariaHidden === "false") return true;
-
-    if (
-      panel.classList.contains("is-open") ||
-      panel.classList.contains("w--open") ||
-      panel.classList.contains("is-active")
-    ) {
-      return true;
-    }
+    if (panel.classList.contains("is-open") || panel.classList.contains("w--open")) return true;
 
     const inlineHeight = parseFloat(panel.style.height || panel.style.maxHeight || "0");
     if (!Number.isNaN(inlineHeight) && inlineHeight > 4) return true;
-
-    if (panel.style.width) {
-      const inlineWidth = parseFloat(panel.style.width);
-      if (!Number.isNaN(inlineWidth) && inlineWidth > 4) return true;
-    }
-
     const rect = panel.getBoundingClientRect();
     return rect.height > 4;
   }
 
-  function getSlides(slider) {
-    return slider ? Array.from(slider.querySelectorAll(slideSelector)) : [];
-  }
-
-  function collectOpenSlides(slider) {
-    return getSlides(slider).filter((slide) => looksOpen(slide.querySelector(panelSelector)));
-  }
-
-  function triggerFooter(slide) {
-    if (!slide || closingSlides.has(slide)) return false;
-    const footer = slide.querySelector(footerSelector);
-    if (!footer) return false;
-    let trigger = footer.querySelector("button, [role='button'], [data-w-id], [data-trigger='card-footer']");
-    if (!trigger) trigger = footer;
+  function triggerFooter(slideEl) {
+    if (!slideEl) return;
+    const footer = slideEl.querySelector(footerSelector);
+    if (!footer) return;
+    const trigger =
+      footer.querySelector("button, [role='button'], [data-w-id], [data-trigger='card-footer']") || footer;
     trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-    monitorClosing(slide);
-    return true;
   }
 
-  function enforceSingle(slider, options = {}) {
-    if (!slider) return false;
-    const { keep = null, closeAll = false } = options;
-    const openSlides = collectOpenSlides(slider);
-    if (!openSlides.length) return false;
+  scopes.forEach((scope) => {
+    let suppress = false;
 
-    let keepSlide = null;
-    if (keep && !closeAll) {
-      keepSlide = keep;
-    } else if (!closeAll) {
-      if (openSlides.length === 1) {
-        keepSlide = openSlides[0];
-      } else {
-        keepSlide = openSlides[openSlides.length - 1];
-      }
+    function collectOpenSlides() {
+      return Array.from(scope.querySelectorAll(cardSelector)).filter((slide) =>
+        looksOpen(slide.querySelector(panelSelector))
+      );
     }
 
-    let changed = false;
-    openSlides.forEach((slide) => {
-      if (keepSlide && slide === keepSlide) return;
-      if (triggerFooter(slide)) changed = true;
-    });
-    return changed;
-  }
+    function closeSlides(slides) {
+      if (!slides.length) return;
+      suppress = true;
+      slides.forEach(triggerFooter);
+      requestAnimationFrame(() => {
+        suppress = false;
+      });
+    }
 
-  function findSliderFrom(element) {
-    return element?.closest(sliderSelector) || null;
-  }
+    function enforceSingleOpen(activeSlide) {
+      const openSlides = collectOpenSlides();
+      const others = openSlides.filter((slide) => slide !== activeSlide);
+      closeSlides(others);
+    }
 
-  function resolveSliderFromNav(button) {
-    if (!button) return null;
-    return (
-      findSliderFrom(button) ||
-      (button.dataset.scrollTarget && document.querySelector(button.dataset.scrollTarget)) ||
-      button.closest(".timeline-tabs, [data-single-open-scope]")?.querySelector(sliderSelector)
+    scope.addEventListener(
+      "click",
+      (event) => {
+        if (suppress) return;
+
+        const navBtn = event.target.closest(navSelector);
+        if (navBtn && scope.contains(navBtn)) {
+          closeSlides(collectOpenSlides());
+          return;
+        }
+
+        const footer = event.target.closest(footerSelector);
+        if (!footer || !scope.contains(footer)) return;
+        const slide = footer.closest(cardSelector);
+        if (!slide) return;
+        requestAnimationFrame(() => enforceSingleOpen(slide));
+      },
+      true
     );
-  }
 
-  function handleToggleClick(event) {
-    if (event.target.closest(panelSelector)) return;
+    scope.querySelectorAll(sliderSelector).forEach((slider) => {
+      let activePointer = null;
 
-    const toggle = event.target.closest(`${footerSelector}, ${customTriggerSelector}`);
-    if (!toggle) return;
+      const pointerStart = (event) => {
+        if (suppress) return;
+        const isTouchStart = event.type === "touchstart";
+        const pointerType = isTouchStart ? "touch" : event.pointerType;
+        if (pointerType && pointerType !== "touch") return;
+        activePointer = {
+          id: isTouchStart ? "touch" : event.pointerId,
+          skip: !!event.target.closest(footerSelector),
+        };
+      };
 
-    const slider = findSliderFrom(toggle);
-    if (!slider) return;
-    const slide = toggle.closest(slideSelector);
-    if (!slide || closingSlides.has(slide)) return;
-    requestAnimationFrame(() => enforceSingle(slider, { keep: slide }));
-  }
+      const pointerEnd = () => {
+        if (suppress || !activePointer || activePointer.skip) {
+          activePointer = null;
+          return;
+        }
+        closeSlides(collectOpenSlides());
+        activePointer = null;
+      };
 
-  function handleNavClick(event) {
-    const navBtn = event.target.closest(navSelector);
-    if (!navBtn) return;
-    const slider = resolveSliderFromNav(navBtn);
-    if (!slider) return;
-    enforceSingle(slider, { closeAll: true });
-  }
-
-  function attachSlider(slider) {
-    if (!slider || managedSliders.has(slider)) return;
-    managedSliders.add(slider);
-
-    let pointerActive = false;
-
-    const pointerStart = (event) => {
-      if (event.target.closest(footerSelector)) {
-        pointerActive = false;
-        return;
-      }
-      pointerActive = true;
-    };
-
-    const pointerEnd = () => {
-      if (!pointerActive) return;
-      pointerActive = false;
-      enforceSingle(slider, { closeAll: true });
-    };
-
-    slider.addEventListener("pointerdown", pointerStart, { passive: true });
-    slider.addEventListener("touchstart", pointerStart, { passive: true });
-    slider.addEventListener("pointerup", pointerEnd, { passive: true });
-    slider.addEventListener("pointercancel", pointerEnd, { passive: true });
-    slider.addEventListener("touchend", pointerEnd, { passive: true });
-    slider.addEventListener("touchcancel", pointerEnd, { passive: true });
-
-    if (window.MutationObserver) {
-      let pending = false;
-      const observer = new MutationObserver(() => {
-        if (pending || !document.body.contains(slider)) return;
-        pending = true;
-        requestAnimationFrame(() => {
-          pending = false;
-          enforceSingle(slider);
-        });
-      });
-      observer.observe(slider, {
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["style", "class", "data-state", "data-open", "aria-expanded", "aria-hidden"],
-      });
-      sliderObservers.set(slider, observer);
-    }
-  }
-
-  function initSliders() {
-    document.querySelectorAll(sliderSelector).forEach(attachSlider);
-  }
-
-  document.addEventListener("click", handleToggleClick, true);
-  document.addEventListener("click", handleNavClick, true);
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initSliders, { once: true });
-  } else {
-    initSliders();
-  }
-
-  if (window.MutationObserver) {
-    const docObserver = new MutationObserver(initSliders);
-    docObserver.observe(document.documentElement, { childList: true, subtree: true });
-  }
+      slider.addEventListener("pointerdown", pointerStart, { passive: true });
+      slider.addEventListener("touchstart", pointerStart, { passive: true });
+      slider.addEventListener("pointerup", pointerEnd, { passive: true });
+      slider.addEventListener("pointercancel", pointerEnd, { passive: true });
+      slider.addEventListener(
+        "touchend",
+        () => {
+          pointerEnd();
+        },
+        { passive: true }
+      );
+      slider.addEventListener(
+        "touchcancel",
+        () => {
+          pointerEnd();
+        },
+        { passive: true }
+      );
+    });
+  });
 })();
