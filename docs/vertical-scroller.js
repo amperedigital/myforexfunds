@@ -115,6 +115,7 @@ ${BASE_SCOPE} .vertical-slide {
 
       const declaredSlideHeight = dataset.scrollSlideHeight || "";
       const hasFixedSlideHeight = Boolean(declaredSlideHeight);
+      const shouldCloak = dataset.scrollCloak !== "false";
       const ease = dataset.scrollEase || "power2.out";
       const duration = normalizeDuration(dataset.scrollDuration, 0.85);
       const loopSlides = dataset.scrollLoop === "true";
@@ -124,6 +125,24 @@ ${BASE_SCOPE} .vertical-slide {
       const keysEnabled = dataset.scrollKeys !== "false";
       const wheelThreshold = toNumber(dataset.scrollWheelThreshold, 10);
       const swipeThreshold = toNumber(dataset.scrollSwipeThreshold, 50);
+
+      let storedVisibility = "";
+      let storedOpacity = "";
+      if (shouldCloak) {
+        storedVisibility = scope.style.visibility || "";
+        storedOpacity = scope.style.opacity || "";
+        scope.style.visibility = "hidden";
+        scope.style.opacity = "0";
+      }
+
+      function revealScope() {
+        if (!shouldCloak || scope.__scrollCloakRevealed) return;
+        scope.__scrollCloakRevealed = true;
+        if (storedVisibility) scope.style.visibility = storedVisibility;
+        else scope.style.removeProperty("visibility");
+        if (storedOpacity) scope.style.opacity = storedOpacity;
+        else scope.style.removeProperty("opacity");
+      }
 
       function applyScopeState() {
         scope.style.setProperty("width", "100%", "important");
@@ -186,27 +205,24 @@ ${BASE_SCOPE} .vertical-slide {
         metricsDirty = true;
       }
 
-      function getSlideOuterHeight(slide) {
-        const rect = slide.getBoundingClientRect();
-        let height = rect.height || slide.offsetHeight || slide.scrollHeight || 0;
-        if (window.getComputedStyle) {
-          const computed = window.getComputedStyle(slide);
-          const marginTop = parseFloat(computed.marginTop) || 0;
-          const marginBottom = parseFloat(computed.marginBottom) || 0;
-          height += marginTop + marginBottom;
-        }
-        return height;
-      }
-
       function measureSlides() {
         metricsDirty = false;
         let running = 0;
         let maxHeight = 0;
         slideOffsets = [];
         slideHeights = [];
+        const baseOffset = slides[0]?.offsetTop || 0;
         slides.forEach((slide, index) => {
-          const height = getSlideOuterHeight(slide);
-          slideOffsets[index] = running;
+          const rect = slide.getBoundingClientRect();
+          let height = rect.height || slide.offsetHeight || slide.scrollHeight || 0;
+          if (window.getComputedStyle) {
+            const computed = window.getComputedStyle(slide);
+            const marginTop = parseFloat(computed.marginTop) || 0;
+            const marginBottom = parseFloat(computed.marginBottom) || 0;
+            height += marginTop + marginBottom;
+          }
+          const offset = slide.offsetTop - baseOffset;
+          slideOffsets[index] = offset;
           slideHeights[index] = height;
           running += height;
           if (height > maxHeight) maxHeight = height;
@@ -277,6 +293,7 @@ ${BASE_SCOPE} .vertical-slide {
           })
         );
         scheduleAutoplay();
+        revealScope();
       };
 
       function clearAutoplay() {
