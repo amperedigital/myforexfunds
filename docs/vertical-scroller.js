@@ -53,10 +53,7 @@ ${BASE_SCOPE} {
 }
 ${BASE_SCOPE} ${DEFAULT_TRACK},
 ${BASE_SCOPE} .vertical-scroll-track {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
+  position: relative !important;
   display: flex !important;
   flex-direction: column !important;
   padding: 0 !important;
@@ -147,10 +144,7 @@ ${BASE_SCOPE} .vertical-slide {
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
 
       function applyTrackState() {
-        track.style.setProperty("position", "absolute", "important");
-        track.style.setProperty("top", "0", "important");
-        track.style.setProperty("left", "0", "important");
-        track.style.setProperty("right", "0", "important");
+        track.style.setProperty("position", "relative", "important");
         track.style.setProperty("display", "flex", "important");
         track.style.setProperty("flex-direction", "column", "important");
         track.style.setProperty("width", "100%", "important");
@@ -191,9 +185,6 @@ ${BASE_SCOPE} .vertical-slide {
         metricsDirty = true;
       }
 
-      let trackHeightPx = 0;
-      let maxSlideHeightPx = 0;
-
       function measureSlides() {
         metricsDirty = false;
         let running = 0;
@@ -216,22 +207,14 @@ ${BASE_SCOPE} .vertical-slide {
             scope.offsetHeight ||
             0;
         }
-        trackHeightPx = running || 0;
-        maxSlideHeightPx = maxHeight || 0;
-
-        if (hasFixedSlideHeight && declaredSlideHeight) {
-          scope.style.setProperty("height", declaredSlideHeight, "important");
-          scope.style.setProperty("min-height", declaredSlideHeight, "important");
-        } else if (maxSlideHeightPx > 0) {
-          const px = `${maxSlideHeightPx}px`;
-          scope.style.setProperty("height", px, "important");
-          scope.style.setProperty("min-height", px, "important");
-        }
-
-        if (Number.isFinite(trackHeightPx) && trackHeightPx > 0) {
-          const px = `${trackHeightPx}px`;
-          track.style.setProperty("height", px, "important");
-          track.style.setProperty("min-height", px, "important");
+        const targetHeight = hasFixedSlideHeight && declaredSlideHeight
+          ? declaredSlideHeight
+          : maxHeight > 0
+          ? `${maxHeight}px`
+          : "";
+        if (targetHeight) {
+          scope.style.setProperty("height", targetHeight, "important");
+          scope.style.setProperty("min-height", targetHeight, "important");
         }
       }
 
