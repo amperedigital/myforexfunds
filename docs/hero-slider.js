@@ -73,6 +73,10 @@
       const slides = sliderEl.querySelectorAll(cardSelector);
       const openSlides = [];
       slides.forEach((slide) => {
+        const parentSlide = slide.closest(".swiper-slide");
+        if (parentSlide && parentSlide.classList.contains("swiper-slide-duplicate")) {
+          return;
+        }
         if (slideLooksOpen(slide)) openSlides.push(slide);
       });
       return { anyOpen: openSlides.length > 0, openSlides };
