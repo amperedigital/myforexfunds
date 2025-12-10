@@ -200,21 +200,23 @@
 
         const activeSlide = footer.closest(cardSelector);
         if (!activeSlide) return;
+        const wasOpen = slideLooksOpen(activeSlide);
 
         console.log("[hero-slider] footer click", {
           currentOpen: collectCardState().openSlides.length,
           slideIndex: Array.from(sliderEl.querySelectorAll(cardSelector)).indexOf(activeSlide),
+          wasOpen,
         });
+        if (wasOpen) {
+          console.log("[hero-slider] slide was already open, letting Webflow close it");
+          requestAnimationFrame(() => syncPlaybackState("footer-close"));
+          return;
+        }
         freezeSwiper();
 
         requestAnimationFrame(() => {
           const { openSlides } = collectCardState();
           console.log("[hero-slider] RAf open slides", openSlides.length);
-          if (openSlides.length === 1 && openSlides[0] === activeSlide) {
-            console.log("[hero-slider] only active slide open, skipping auto-close");
-            syncPlaybackState("only-slide-open");
-            return;
-          }
           const otherOpenSlides = openSlides.filter((slide) => slide !== activeSlide);
           if (!otherOpenSlides.length) {
             syncPlaybackState("footer-no-change");
