@@ -109,6 +109,11 @@
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
 
       function applyTrackState() {
+        track.style.setProperty("position", "absolute", "important");
+        track.style.setProperty("top", "0", "important");
+        track.style.setProperty("left", "0", "important");
+        track.style.setProperty("right", "0", "important");
+        track.style.setProperty("bottom", "0", "important");
         track.style.setProperty("display", "flex", "important");
         track.style.setProperty("flex-direction", "column", "important");
         track.style.setProperty("width", "100%", "important");
