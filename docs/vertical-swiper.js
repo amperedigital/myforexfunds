@@ -55,7 +55,14 @@
     const lockWheel = dataset.scrollLock === "true" && !isTouch;
 
     scope.classList.add("hero-vertical-swiper", "swiper");
+    scope.style.setProperty("width", "100%", "important");
+    scope.style.setProperty("height", "auto", "important");
+    scope.style.setProperty("overflow", "hidden", "important");
     track.classList.add("swiper-wrapper");
+    track.style.setProperty("width", "100%", "important");
+    track.style.setProperty("height", "auto", "important");
+    track.style.setProperty("display", "flex", "important");
+    track.style.setProperty("flex-direction", "column", "important");
     slides.forEach((slide) => {
       slide.classList.add("swiper-slide");
       slide.style.setProperty("width", "100%", "important");
