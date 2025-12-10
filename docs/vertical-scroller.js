@@ -38,6 +38,9 @@
 
   const prefersReduce =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const coarsePointerQuery =
+    window.matchMedia && window.matchMedia("(pointer: coarse)");
+  const isCoarsePointerDevice = Boolean(coarsePointerQuery && coarsePointerQuery.matches);
 
   function injectBaseStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -121,6 +124,7 @@ ${BASE_SCOPE} .vertical-slide {
       const loopSlides = dataset.scrollLoop === "true";
       const wheelEnabled = dataset.scrollWheel !== "false";
       const wheelLock = dataset.scrollLock === "true";
+      const wheelLockAllowed = wheelLock && !isCoarsePointerDevice;
       const touchEnabled = dataset.scrollTouch !== "false";
       const keysEnabled = dataset.scrollKeys !== "false";
       const wheelThreshold = toNumber(dataset.scrollWheelThreshold, 10);
@@ -405,12 +409,13 @@ ${BASE_SCOPE} .vertical-slide {
       }
 
       function maybeLockWheel(event) {
-        if (!wheelLock || !event || !event.cancelable) return;
+        if (!wheelLockAllowed || !event || !event.cancelable) return;
         if (!scope.contains(event.target)) return;
         event.preventDefault();
       }
 
       function handleWheel(event) {
+        if (isCoarsePointerDevice) return;
         if (!scope.contains(event.target)) return;
         if (!wheelEnabled || isAnimating) {
           maybeLockWheel(event);
@@ -599,7 +604,9 @@ ${BASE_SCOPE} .vertical-slide {
         }
       });
 
-      if (wheelEnabled) scope.addEventListener("wheel", handleWheel, { passive: false });
+      if (wheelEnabled || wheelLockAllowed) {
+        scope.addEventListener("wheel", handleWheel, { passive: false });
+      }
       if (touchEnabled) {
         if (supportsPointer) {
           scope.addEventListener("pointerdown", pointerDown, { passive: true });
