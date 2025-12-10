@@ -49,3 +49,60 @@
     breakpoint.addListener(apply);
   }
 })();
+(function heroSliderSingleOpen(){
+  const scopeSelector = '.timeline-tabs, [data-single-open-scope]';
+  const cardSelector = '.hero-card-slide';
+  const panelSelector = '.hero-card-list-wrapper';
+  const footerSelector = '.hero-card-footer';
+
+  const scopes = document.querySelectorAll(scopeSelector);
+  if(!scopes.length) return;
+
+  const closing = new WeakSet();
+
+  function looksOpen(panel){
+    if(!panel) return false;
+    const inlineHeight = parseFloat(panel.style.height || panel.style.maxHeight || '0');
+    if(!Number.isNaN(inlineHeight) && inlineHeight > 4) return true;
+    const inlineWidth = parseFloat(panel.style.width || panel.style.maxWidth || '0');
+    if(!Number.isNaN(inlineWidth) && inlineWidth > 4) return true;
+    const rect = panel.getBoundingClientRect();
+    return rect.height > 4;
+  }
+
+  function triggerFooter(slide){
+    if(!slide || closing.has(slide)) return;
+    const footer = slide.querySelector(footerSelector);
+    if(!footer) return;
+    let trigger = footer.querySelector('button, [role="button"], [data-w-id], [data-trigger="card-footer"]') || footer;
+    closing.add(slide);
+    trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    setTimeout(() => closing.delete(slide), 50);
+  }
+
+  scopes.forEach((scope) => {
+    let suppress = false;
+
+    function collectOpenSlides(){
+      return Array.from(scope.querySelectorAll(cardSelector)).filter((slide) => looksOpen(slide.querySelector(panelSelector)));
+    }
+
+    function closeOthers(active){
+      const openSlides = collectOpenSlides();
+      const others = openSlides.filter((slide) => slide !== active);
+      if(!others.length) return;
+      suppress = true;
+      others.forEach(triggerFooter);
+      requestAnimationFrame(() => { suppress = false; });
+    }
+
+    scope.addEventListener('click', (event) => {
+      if(suppress) return;
+      const footer = event.target.closest(footerSelector);
+      if(!footer || !scope.contains(footer)) return;
+      const slide = footer.closest(cardSelector);
+      if(!slide) return;
+      requestAnimationFrame(() => closeOthers(slide));
+    }, true);
+  });
+})();
