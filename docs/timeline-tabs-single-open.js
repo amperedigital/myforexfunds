@@ -8,6 +8,8 @@
   const slideSelector = ".hero-card-slide, .timeline-slide-card";
   const panelSelector = ".hero-card-list-wrapper, .timeline-card-list-wrapper";
   const footerSelector = ".hero-card-footer, .timeline-card-footer";
+  const slideTriggerSelector =
+    ".hero-card-slide, .timeline-slide-card, [data-card-trigger], [data-slide-trigger]";
   const navSelector =
     ".swiper-button-prev, .swiper-button-next, .swiper-pagination-bullet, .w-slider-arrow-left, .w-slider-arrow-right, .w-slider-dot, [data-scroll-prev], [data-scroll-next]";
 
@@ -104,12 +106,15 @@
     );
   }
 
-  function handleFooterClick(event) {
-    const footer = event.target.closest(footerSelector);
-    if (!footer) return;
-    const slider = findSliderFrom(footer);
+  function handleToggleClick(event) {
+    if (event.target.closest(panelSelector)) return;
+
+    const toggle = event.target.closest(`${footerSelector}, ${slideTriggerSelector}`);
+    if (!toggle) return;
+
+    const slider = findSliderFrom(toggle);
     if (!slider) return;
-    const slide = footer.closest(slideSelector);
+    const slide = toggle.closest(slideSelector);
     if (!slide || closingSlides.has(slide)) return;
     requestAnimationFrame(() => enforceSingle(slider, { keep: slide }));
   }
@@ -172,7 +177,7 @@
     document.querySelectorAll(sliderSelector).forEach(attachSlider);
   }
 
-  document.addEventListener("click", handleFooterClick, true);
+  document.addEventListener("click", handleToggleClick, true);
   document.addEventListener("click", handleNavClick, true);
 
   if (document.readyState === "loading") {
