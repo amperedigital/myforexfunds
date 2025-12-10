@@ -50,6 +50,8 @@
     if (slides.length < 2) return;
 
     const dataset = scope.dataset || {};
+    const explicitStartIndex = Number.parseInt(dataset.scrollStartIndex || "", 10);
+    const startIndex = Number.isFinite(explicitStartIndex) ? explicitStartIndex : 0;
 
     resetLegacyTransforms(scope, track);
     const isTouch = hasTouch();
@@ -129,6 +131,11 @@
           : undefined,
       on: {
         init(swiperInstance) {
+          if (swiperInstance.params.loop) {
+            swiperInstance.slideToLoop(startIndex, 0, false);
+          } else {
+            swiperInstance.slideTo(startIndex, 0, false);
+          }
           scope.classList.add("is-ready");
           emitChange(swiperInstance, scope);
         },
