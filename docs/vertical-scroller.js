@@ -296,6 +296,12 @@ ${BASE_SCOPE} .vertical-slide {
           ? 0
           : toNumber(autoplayAttr, 0);
       const autoplayDirection = dataset.scrollAutoplayDirection === "reverse" ? -1 : 1;
+      const autoplayStartDelayRaw = dataset.scrollDelay;
+      const initialAutoplayDelay = toNumber(
+        autoplayStartDelayRaw === undefined ? null : autoplayStartDelayRaw,
+        null
+      );
+      let pendingStartDelay = Number.isFinite(initialAutoplayDelay) ? initialAutoplayDelay : null;
       let autoplayTimer = null;
 
       const emitChange = () => {
@@ -314,12 +320,16 @@ ${BASE_SCOPE} .vertical-slide {
         autoplayTimer = null;
       }
 
-      function scheduleAutoplay() {
+      function scheduleAutoplay(requestedDelay) {
         if (!autoplayInterval || isHovered) return;
         clearAutoplay();
+        const delay = Number.isFinite(requestedDelay)
+          ? requestedDelay
+          : pendingStartDelay ?? autoplayInterval;
+        pendingStartDelay = null;
         autoplayTimer = setTimeout(() => {
           goRelative(autoplayDirection);
-        }, autoplayInterval);
+        }, delay);
       }
 
       function updateActiveState() {
