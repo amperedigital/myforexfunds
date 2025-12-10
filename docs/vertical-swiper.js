@@ -28,6 +28,15 @@
     );
   }
 
+  function resetLegacyTransforms(scope, track) {
+    ["transform", "transition", "top", "left", "right", "bottom", "height", "min-height"].forEach(
+      (prop) => {
+        if (scope.style) scope.style.removeProperty(prop);
+        if (track.style) track.style.removeProperty(prop);
+      }
+    );
+  }
+
   function initScope(scope) {
     if (scope.__verticalSwiper || typeof Swiper === "undefined") return;
 
@@ -41,6 +50,8 @@
     if (slides.length < 2) return;
 
     const dataset = scope.dataset || {};
+
+    resetLegacyTransforms(scope, track);
     const isTouch = hasTouch();
     const autoplayAttr = dataset.scrollAutoplay;
     const autoplayDelay =
