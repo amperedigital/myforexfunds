@@ -166,6 +166,7 @@
             if (!footer) return;
             const trigger =
               footer.querySelector('button, [role="button"], [data-w-id], [data-trigger="card-footer"]') || footer;
+            trigger.dataset.heroSingleOpen = 'true';
             trigger.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
           });
         requestAnimationFrame(() => {
@@ -187,6 +188,11 @@
           if (!footer || !scopeElement.contains(footer)) return;
           const slide = footer.closest(cardSelector);
           if (!slide) return;
+          let trigger = footer.querySelector('button, [role="button"], [data-w-id], [data-trigger="card-footer"]') || footer;
+          if (trigger.dataset.heroSingleOpen === 'true') {
+            delete trigger.dataset.heroSingleOpen;
+            return;
+          }
           requestAnimationFrame(() => closeSlides(slide));
         },
         true
