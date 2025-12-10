@@ -200,9 +200,20 @@ ${BASE_SCOPE} .vertical-slide {
       let slideOffsets = [];
       let slideHeights = [];
       let metricsDirty = true;
+      let dynamicSlideHeight = hasFixedSlideHeight ? declaredSlideHeight : "";
 
       function markMetricsDirty() {
         metricsDirty = true;
+      }
+
+      function applyDynamicSlideSize(value) {
+        if (hasFixedSlideHeight) return;
+        if (!value || dynamicSlideHeight === value) return;
+        dynamicSlideHeight = value;
+        slides.forEach((slide) => {
+          slide.style.setProperty("min-height", value, "important");
+          slide.style.setProperty("height", value, "important");
+        });
       }
 
       function measureSlides() {
@@ -242,6 +253,7 @@ ${BASE_SCOPE} .vertical-slide {
           : `${running}px`;
         scope.style.setProperty("height", targetHeight, "important");
         scope.style.setProperty("min-height", targetHeight, "important");
+        applyDynamicSlideSize(targetHeight);
       }
 
       function ensureMetrics() {
