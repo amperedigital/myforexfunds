@@ -1,9 +1,11 @@
 /**
- * Timeline Tabs helper
- * Ensures only one card/panel stays open inside Swiper-powered timelines.
- * Relies on Webflow interactions by dispatching click events on the card footers.
+ * Hero / Timeline Card helper
+ * Keeps Webflow-controlled cards in Swiper sliders to a single open panel.
+ * - Works with `.hero-card-slide` + `.timeline-slide-card` markup
+ * - Respects Webflow interactions by dispatching click events on footers
+ * - Closes cards automatically when nav buttons or pointer dragging occur
  */
-(function timelineTabsSingleOpen() {
+(function heroCardSingleOpen() {
   const sliderSelector = ".timeline-slider, .hero-card-slider, [data-single-open-slider]";
   const slideSelector = ".hero-card-slide, .timeline-slide-card";
   const panelSelector = ".hero-card-list-wrapper, .timeline-card-list-wrapper";
