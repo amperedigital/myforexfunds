@@ -86,33 +86,55 @@
       const swipeThreshold = toNumber(dataset.scrollSwipeThreshold, 50);
 
       function applyScopeState() {
-        if (!scope.style.touchAction || scope.style.touchAction === "auto") {
-          scope.style.touchAction = "none";
-        }
-        if (!scope.style.overflow || scope.style.overflow === "visible") {
-          scope.style.overflow = "hidden";
-        }
+        scope.style.setProperty("width", "100%", "important");
+        scope.style.setProperty("max-width", "100%", "important");
+        scope.style.setProperty("position", "relative", "important");
+        scope.style.setProperty("display", "block", "important");
+        scope.style.setProperty("overflow", "hidden", "important");
+        scope.style.setProperty("touch-action", "none", "important");
         if (hasFixedSlideHeight) {
-          scope.style.height = normalizedSlideHeight;
-          scope.style.minHeight = normalizedSlideHeight;
+          scope.style.setProperty("height", normalizedSlideHeight, "important");
+          scope.style.setProperty("min-height", normalizedSlideHeight, "important");
         }
       }
       applyScopeState();
+      const scopeWatcher = new MutationObserver((mutations) => {
+        const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
+        if (needsUpdate) applyScopeState();
+      });
+      scopeWatcher.observe(scope, { attributes: true, attributeFilter: ["style"] });
 
       if (!scope.hasAttribute("tabindex")) scope.tabIndex = 0;
 
       function applyTrackState() {
-        track.style.willChange = track.style.willChange || "transform";
+        track.style.setProperty("position", "relative", "important");
+        track.style.setProperty("display", "flex", "important");
+        track.style.setProperty("flex-direction", "column", "important");
+        track.style.setProperty("width", "100%", "important");
+        track.style.setProperty("padding", "0", "important");
+        track.style.setProperty("margin", "0", "important");
+        track.style.setProperty("gap", "0", "important");
+        track.style.setProperty("grid-column-gap", "0", "important");
+        track.style.setProperty("grid-row-gap", "0", "important");
+        track.style.setProperty("pointer-events", "auto", "important");
+        track.style.setProperty("will-change", "transform");
         if (!track.style.transform) {
           track.style.transform = "translate3d(0, 0, 0)";
         }
       }
       applyTrackState();
+      const trackWatcher = new MutationObserver((mutations) => {
+        const needsUpdate = mutations.some((mutation) => mutation.attributeName === "style");
+        if (needsUpdate) applyTrackState();
+      });
+      trackWatcher.observe(track, { attributes: true, attributeFilter: ["style"] });
 
       slides.forEach((slide) => {
+        slide.style.setProperty("flex", "0 0 auto", "important");
+        slide.style.setProperty("width", "100%", "important");
         if (hasFixedSlideHeight) {
-          slide.style.minHeight = normalizedSlideHeight;
-          slide.style.height = normalizedSlideHeight;
+          slide.style.setProperty("min-height", normalizedSlideHeight, "important");
+          slide.style.setProperty("height", normalizedSlideHeight, "important");
         }
       });
 
