@@ -183,11 +183,11 @@
           );
           if (icon) {
             gsap.killTweensOf(icon);
-            gsap.to(icon, { rotate: 180, duration: 0.45, ease: "power2.out" });
+            gsap.to(icon, { rotate: 0, duration: 0.45, ease: "power2.out" });
           }
         } else {
           panel.style.height = `${targetHeight}px`;
-          if (icon) icon.style.transform = "rotate(180deg)";
+          if (icon) icon.style.transform = "rotate(0deg)";
         }
       }
 
@@ -216,11 +216,11 @@
           );
           if (icon) {
             gsap.killTweensOf(icon);
-            gsap.to(icon, { rotate: 0, duration: 0.35, ease: "power2.inOut" });
+            gsap.to(icon, { rotate: 180, duration: 0.35, ease: "power2.inOut" });
           }
         } else {
           panel.style.height = "0px";
-          if (icon) icon.style.transform = "rotate(0deg)";
+          if (icon) icon.style.transform = "rotate(180deg)";
         }
       }
 
