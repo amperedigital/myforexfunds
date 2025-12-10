@@ -131,11 +131,8 @@
           : undefined,
       on: {
         init(swiperInstance) {
-          if (swiperInstance.params.loop) {
-            swiperInstance.slideToLoop(startIndex, 0, false);
-          } else {
-            swiperInstance.slideTo(startIndex, 0, false);
-          }
+          swiperInstance.setTranslate(0);
+          swiperInstance.slideTo(startIndex, 0, false);
           scope.classList.add("is-ready");
           emitChange(swiperInstance, scope);
         },
