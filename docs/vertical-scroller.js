@@ -34,15 +34,59 @@
   const PREV_SELECTOR = "[data-scroll-prev]";
   const TO_SELECTOR = "[data-scroll-to]";
   const WAIT_INTERVAL = 150;
+  const STYLE_ID = "gsap-vertical-scroll-base";
 
   const prefersReduce =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function injectBaseStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = `
+${BASE_SCOPE} {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: var(--vertical-scroll-slide-height, 100vh) !important;
+  max-height: var(--vertical-scroll-slide-height, 100vh) !important;
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+${BASE_SCOPE} ${DEFAULT_TRACK},
+${BASE_SCOPE} .vertical-scroll-track {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  overflow: visible !important;
+  will-change: transform !important;
+}
+${BASE_SCOPE} ${DEFAULT_SLIDE},
+${BASE_SCOPE} .vertical-slide {
+  flex: 0 0 var(--vertical-scroll-slide-height, 100vh) !important;
+  min-height: var(--vertical-scroll-slide-height, 100vh) !important;
+  height: var(--vertical-scroll-slide-height, 100vh) !important;
+  width: 100% !important;
+}
+`;
+    document.head.appendChild(style);
+  }
 
   function queryScopes() {
     return Array.from(document.querySelectorAll(BASE_SCOPE));
   }
 
   function enableNativeScroll(scopes) {
+    injectBaseStyles();
     scopes.forEach((scope) => {
       if (scope.__verticalScrollInit) return;
       scope.style.setProperty("overflow-y", "auto", "important");
