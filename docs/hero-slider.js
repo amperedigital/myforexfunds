@@ -4,6 +4,8 @@
   const cardSelector = ".hero-card-slide";
   const panelSelector = ".hero-card-list-wrapper";
   const footerSelector = ".hero-card-footer";
+  const navSelector = ".swiper-button-next, .swiper-button-prev, .swiper-pagination-bullet";
+  const iconSelector = ".icon-regular svg, .icon-regular";
   const breakpoint = window.matchMedia("(max-width: 767px)");
   let pendingReload = false;
 
@@ -37,6 +39,8 @@
 
     function panelLooksOpen(panel) {
       if (!panel) return false;
+      const parentSlide = panel.closest(cardSelector);
+      if (parentSlide && parentSlide.dataset.heroOpen === "true") return true;
       if (
         panel.dataset.state === "open" ||
         panel.dataset.open === "true" ||
@@ -61,6 +65,7 @@
 
     function slideLooksOpen(slideEl) {
       if (!slideEl) return false;
+      if (slideEl.dataset.heroOpen === "true") return true;
       if (
         slideEl.dataset.state === "open" ||
         slideEl.dataset.open === "true" ||
@@ -118,6 +123,137 @@
       let frozenTranslate = null;
       let suppressFooterChain = false;
       const cleanupFns = [];
+      const slides = Array.from(sliderEl.querySelectorAll(cardSelector));
+
+      slides.forEach((slide) => prepareSlide(slide));
+
+      function prepareSlide(slide) {
+        const panel = slide.querySelector(panelSelector);
+        if (!panel) return;
+        slide.dataset.heroOpen = slide.dataset.heroOpen === "true" ? "true" : "false";
+        if (slide.dataset.heroOpen !== "true") {
+          panel.style.height = "0px";
+          panel.setAttribute("aria-hidden", "true");
+        } else {
+          panel.style.height = "auto";
+          panel.setAttribute("aria-hidden", "false");
+        }
+        panel.style.overflow = "hidden";
+        slide
+          .querySelectorAll("[data-w-id]")
+          .forEach((interactiveEl) => interactiveEl.removeAttribute("data-w-id"));
+      }
+
+      function getPanel(slide) {
+        return slide.querySelector(panelSelector);
+      }
+
+      function getIcon(slide) {
+        return slide.querySelector(iconSelector);
+      }
+
+      function setSlideState(slide, open) {
+        slide.dataset.heroOpen = open ? "true" : "false";
+        slide.classList.toggle("is-open", open);
+      }
+
+      function openSlide(slide) {
+        if (!slide || slide.dataset.heroOpen === "true") return;
+        const panel = getPanel(slide);
+        if (!panel) return;
+        const icon = getIcon(slide);
+        const startHeight = panel.getBoundingClientRect().height || 0;
+        const targetHeight = panel.scrollHeight || startHeight;
+        panel.setAttribute("aria-hidden", "false");
+        setSlideState(slide, true);
+        if (typeof gsap !== "undefined") {
+          gsap.killTweensOf(panel);
+          panel.style.height = `${startHeight}px`;
+          gsap.fromTo(
+            panel,
+            { height: startHeight },
+            {
+              height: targetHeight,
+              duration: 0.55,
+              ease: "power2.out",
+              onComplete: () => {
+                panel.style.height = "auto";
+              },
+            }
+          );
+          if (icon) {
+            gsap.killTweensOf(icon);
+            gsap.to(icon, { rotate: 180, duration: 0.45, ease: "power2.out" });
+          }
+        } else {
+          panel.style.height = `${targetHeight}px`;
+          if (icon) icon.style.transform = "rotate(180deg)";
+        }
+      }
+
+      function closeSlide(slide) {
+        if (!slide || slide.dataset.heroOpen !== "true") return;
+        const panel = getPanel(slide);
+        if (!panel) return;
+        const icon = getIcon(slide);
+        const startHeight = panel.scrollHeight || panel.getBoundingClientRect().height || 0;
+        panel.setAttribute("aria-hidden", "true");
+        setSlideState(slide, false);
+        if (typeof gsap !== "undefined") {
+          gsap.killTweensOf(panel);
+          panel.style.height = `${startHeight}px`;
+          gsap.fromTo(
+            panel,
+            { height: startHeight },
+            {
+              height: 0,
+              duration: 0.45,
+              ease: "power2.inOut",
+              onComplete: () => {
+                panel.style.height = "0px";
+              },
+            }
+          );
+          if (icon) {
+            gsap.killTweensOf(icon);
+            gsap.to(icon, { rotate: 0, duration: 0.35, ease: "power2.inOut" });
+          }
+        } else {
+          panel.style.height = "0px";
+          if (icon) icon.style.transform = "rotate(0deg)";
+        }
+      }
+
+      function closeOtherSlides(exceptSlide) {
+        let changed = false;
+        slides.forEach((slide) => {
+          if (slide === exceptSlide) return;
+          if (slide.closest(".swiper-slide")?.classList.contains("swiper-slide-duplicate")) return;
+          if (slide.dataset.heroOpen === "true") {
+            closeSlide(slide);
+            changed = true;
+          }
+        });
+        if (changed) {
+          requestAnimationFrame(() => syncPlaybackState("manual-close"));
+        }
+      }
+
+      function toggleSlide(slide) {
+        const isOpen = slide?.dataset.heroOpen === "true";
+        if (!slide || slide.closest(".swiper-slide")?.classList.contains("swiper-slide-duplicate")) return;
+        if (isOpen) {
+          closeSlide(slide);
+        } else {
+          closeOtherSlides(slide);
+          openSlide(slide);
+        }
+        requestAnimationFrame(() => syncPlaybackState("toggle"));
+      }
+
+      const closeOnSlideChange = () => closeOtherSlides(null);
+      swiper.on("slideChangeTransitionStart", closeOnSlideChange);
+      cleanupFns.push(() => swiper.off("slideChangeTransitionStart", closeOnSlideChange));
 
       function freezeSwiper() {
         if (isMobileMode || !swiper?.autoplay?.running) return;
@@ -150,18 +286,6 @@
         }
       }
 
-      function triggerFooterToggle(slideEl) {
-        if (!slideEl) return;
-        const footer = slideEl.querySelector(footerSelector);
-        if (!footer) return;
-        const interactiveTarget =
-          footer.querySelector("button, [role='button'], [data-w-id]") || footer;
-        console.log("[hero-slider] trigger footer toggle");
-        interactiveTarget.dispatchEvent(
-          new MouseEvent("click", { bubbles: true, cancelable: true })
-        );
-      }
-
       if (isMobileMode) {
         const mobileClickHandler = () => {
           const { openSlides } = collectCardState();
@@ -169,7 +293,7 @@
           const latest = openSlides[openSlides.length - 1];
           const others = openSlides.filter((slide) => slide !== latest);
           suppressFooterChain = true;
-          others.forEach((slide) => triggerFooterToggle(slide));
+          others.forEach((slide) => closeSlide(slide));
           requestAnimationFrame(() => {
             suppressFooterChain = false;
             syncPlaybackState("mobile-enforce");
@@ -200,44 +324,21 @@
 
         const activeSlide = footer.closest(cardSelector);
         if (!activeSlide) return;
-        const wasOpen = slideLooksOpen(activeSlide);
-
-        console.log("[hero-slider] footer click", {
-          currentOpen: collectCardState().openSlides.length,
-          slideIndex: Array.from(sliderEl.querySelectorAll(cardSelector)).indexOf(activeSlide),
-          wasOpen,
-        });
-        if (wasOpen) {
-          console.log("[hero-slider] slide was already open, letting Webflow close it");
-          suppressFooterChain = true;
-          requestAnimationFrame(() => {
-            suppressFooterChain = false;
-            syncPlaybackState("footer-close");
-          });
-          return;
-        }
-        freezeSwiper();
-
-        requestAnimationFrame(() => {
-          const { openSlides } = collectCardState();
-          console.log("[hero-slider] RAf open slides", openSlides.length);
-          const otherOpenSlides = openSlides.filter((slide) => slide !== activeSlide);
-          if (!otherOpenSlides.length) {
-            syncPlaybackState("footer-no-change");
-            return;
-          }
-          console.log("[hero-slider] closing other slides", otherOpenSlides.length);
-          suppressFooterChain = true;
-          otherOpenSlides.forEach((slide) => triggerFooterToggle(slide));
-          setTimeout(() => {
-            suppressFooterChain = false;
-            syncPlaybackState("footer-auto-close");
-            console.log("[hero-slider] other slides closed");
-          }, 0);
-        });
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        toggleSlide(activeSlide);
       };
       sliderEl.addEventListener("click", footerHandler, true);
       cleanupFns.push(() => sliderEl.removeEventListener("click", footerHandler, true));
+
+      const navHandler = (event) => {
+        const navBtn = event.target.closest(navSelector);
+        if (!navBtn || !sliderEl.contains(navBtn)) return;
+        closeOtherSlides(null);
+      };
+      sliderEl.addEventListener("click", navHandler, true);
+      cleanupFns.push(() => sliderEl.removeEventListener("click", navHandler, true));
 
       if (!isMobileMode) {
         const pointerDown = () => {
