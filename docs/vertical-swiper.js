@@ -129,14 +129,7 @@
             reverseDirection: autoplayReverse,
           }
         : false,
-      mousewheel: wheelEnabled
-        ? {
-            enabled: true,
-            forceToAxis: true,
-            releaseOnEdges: true,
-            invert: false,
-          }
-        : false,
+      mousewheel: false,
       keyboard: {
         enabled: keysEnabled,
         onlyInViewport: true,
@@ -172,8 +165,9 @@
         "wheel",
         (event) => {
           if (!scope.contains(event.target) || Math.abs(event.deltaY) < 2) return;
-          if (event.cancelable) event.preventDefault();
+          if (lockWheel && event.cancelable) event.preventDefault();
           if (!wheelEnabled) return;
+          event.preventDefault();
           if (event.deltaY > 0) swiper.slidePrev();
           else swiper.slideNext();
         },
