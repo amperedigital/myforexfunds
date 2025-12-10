@@ -73,10 +73,10 @@
     if (!openSlides.length) return false;
 
     let keepSlide = null;
-    if (!closeAll) {
-      if (keep && openSlides.includes(keep)) {
-        keepSlide = keep;
-      } else if (openSlides.length === 1) {
+    if (keep && !closeAll) {
+      keepSlide = keep;
+    } else if (!closeAll) {
+      if (openSlides.length === 1) {
         keepSlide = openSlides[0];
       } else {
         keepSlide = openSlides[openSlides.length - 1];
