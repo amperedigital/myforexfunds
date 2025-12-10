@@ -131,7 +131,7 @@
             enabled: true,
             forceToAxis: true,
             releaseOnEdges: true,
-            invert: true,
+            invert: false,
           }
         : false,
       keyboard: {
@@ -147,6 +147,12 @@
           : undefined,
       on: {
         init(swiperInstance) {
+          const targetIndex = clampIndex(startIndex, slides.length - 1);
+          if (loopSlides && swiperInstance.slideToLoop) {
+            swiperInstance.slideToLoop(targetIndex, 0, false);
+          } else {
+            swiperInstance.slideTo(targetIndex, 0, false);
+          }
           scope.classList.add("is-ready");
           if (autoplayEnabled && autoplayStartDelay && swiperInstance.autoplay) {
             swiperInstance.autoplay.stop();
@@ -168,6 +174,18 @@
         (event) => {
           if (!scope.contains(event.target)) return;
           if (event.cancelable) event.preventDefault();
+        },
+        { passive: false }
+      );
+    }
+    if (wheelEnabled && !lockWheel) {
+      scope.addEventListener(
+        "wheel",
+        (event) => {
+          if (!scope.contains(event.target) || Math.abs(event.deltaY) < 2) return;
+          event.preventDefault();
+          if (event.deltaY > 0) swiper.slideNext();
+          else swiper.slidePrev();
         },
         { passive: false }
       );
