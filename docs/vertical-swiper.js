@@ -164,12 +164,17 @@
       },
     });
 
-    if (lockWheel && !isTouch) {
+    if ((wheelEnabled || lockWheel) && !isTouch) {
       scope.addEventListener(
         "wheel",
         (event) => {
+          if (!scope.contains(event.target) || Math.abs(event.deltaY) < 2) return;
+          event.preventDefault();
           if (!scope.contains(event.target)) return;
-          if (event.cancelable) event.preventDefault();
+          if (lockWheel && event.cancelable) event.preventDefault();
+          if (!wheelEnabled) return;
+          if (event.deltaY > 0) swiper.slideNext();
+          else swiper.slidePrev();
         },
         { passive: false }
       );
