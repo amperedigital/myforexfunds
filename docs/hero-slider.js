@@ -16,12 +16,17 @@
   }
 
   onReady(() => {
+    console.log("[hero-slider] init start");
     if (typeof Swiper === "undefined") return;
 
     const attrMatches = Array.from(document.querySelectorAll(`[${targetAttr}]`));
     const fallback = !attrMatches.length ? document.querySelector(sliderSelector) : null;
     const sliderEls = attrMatches.length ? attrMatches : fallback ? [fallback] : [];
-    if (!sliderEls.length) return;
+    console.log("[hero-slider] found sliders", sliderEls.length);
+    if (!sliderEls.length) {
+      console.warn("[hero-slider] no slider found");
+      return;
+    }
 
     sliderEls.forEach((sliderEl) => initHeroSlider(sliderEl));
   });
@@ -151,6 +156,7 @@
         if (!footer) return;
         const interactiveTarget =
           footer.querySelector("button, [role='button'], [data-w-id]") || footer;
+        console.log("[hero-slider] trigger footer toggle");
         interactiveTarget.dispatchEvent(
           new MouseEvent("click", { bubbles: true, cancelable: true })
         );
