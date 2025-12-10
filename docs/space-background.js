@@ -262,12 +262,7 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
     const videoHost = videoContext.host || null;
     const videoEl = videoContext.video || null;
     const videoRestartAttr = el.getAttribute("data-space-bg-video-restart");
-    const videoRestartEnabled =
-      videoRestartAttr === null
-        ? true
-        : videoRestartAttr === "" || videoRestartAttr === "true"
-        ? false
-        : videoRestartAttr !== "false";
+    const videoRestartEnabled = videoRestartAttr === "true";
     let lastVideoRestartWidth = typeof window !== "undefined" ? window.innerWidth : 0;
     const VIDEO_RESTART_WIDTH_THRESHOLD = 24;
 
