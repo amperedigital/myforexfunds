@@ -1,10 +1,18 @@
 (function () {
-  function enableDragScroll(wrapper) {
+  function enableTimelineScroll(wrapper) {
     if (!wrapper) return;
 
+    const track = wrapper.querySelector('.timeline-container');
+    const line = wrapper.querySelector('.timeline-line');
     let dragging = false;
     let startX = 0;
     let startScroll = 0;
+
+    function syncLine() {
+      if (!line || !track) return;
+      line.style.width = track.scrollWidth + 'px';
+      line.style.transform = 'translateX(' + -wrapper.scrollLeft + 'px)';
+    }
 
     function pointerDown(event) {
       if (event.pointerType === 'mouse' && event.button !== 0) return;
@@ -20,6 +28,7 @@
       event.preventDefault();
       const deltaX = event.clientX - startX;
       wrapper.scrollLeft = startScroll - deltaX;
+      syncLine();
     }
 
     function endDrag(event) {
@@ -34,11 +43,17 @@
     wrapper.addEventListener('pointerup', endDrag);
     wrapper.addEventListener('pointerleave', endDrag);
     wrapper.addEventListener('pointercancel', endDrag);
+    wrapper.addEventListener('scroll', syncLine, { passive: true });
+
+    const resizeObserver = new ResizeObserver(syncLine);
+    if (track) resizeObserver.observe(track);
+
+    syncLine();
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     document
       .querySelectorAll('.section-timeline .timeline-wrapper')
-      .forEach(enableDragScroll);
+      .forEach(enableTimelineScroll);
   });
 })();
