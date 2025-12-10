@@ -56,13 +56,20 @@
 
     scope.classList.add("hero-vertical-swiper", "swiper");
     scope.style.setProperty("width", "100%", "important");
+    scope.style.setProperty("max-width", "100%", "important");
     scope.style.setProperty("height", "auto", "important");
+    scope.style.setProperty("min-height", "0", "important");
+    scope.style.setProperty("position", "relative", "important");
     scope.style.setProperty("overflow", "hidden", "important");
     track.classList.add("swiper-wrapper");
     track.style.setProperty("width", "100%", "important");
     track.style.setProperty("height", "auto", "important");
     track.style.setProperty("display", "flex", "important");
     track.style.setProperty("flex-direction", "column", "important");
+    track.style.setProperty("position", "relative", "important");
+    track.style.setProperty("top", "auto", "important");
+    track.style.setProperty("left", "auto", "important");
+    track.style.setProperty("right", "auto", "important");
     slides.forEach((slide) => {
       slide.classList.add("swiper-slide");
       slide.style.setProperty("width", "100%", "important");
