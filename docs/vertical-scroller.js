@@ -48,8 +48,6 @@ ${BASE_SCOPE} {
   position: relative !important;
   width: 100% !important;
   max-width: 100% !important;
-  height: var(--vertical-scroll-slide-height, 100vh) !important;
-  max-height: var(--vertical-scroll-slide-height, 100vh) !important;
   overflow: hidden !important;
   touch-action: none !important;
 }
@@ -59,11 +57,10 @@ ${BASE_SCOPE} .vertical-scroll-track {
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  bottom: 0 !important;
+  width: 100% !important;
+  height: auto !important;
   display: flex !important;
   flex-direction: column !important;
-  width: 100% !important;
-  height: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
   gap: 0 !important;
@@ -72,9 +69,7 @@ ${BASE_SCOPE} .vertical-scroll-track {
 }
 ${BASE_SCOPE} ${DEFAULT_SLIDE},
 ${BASE_SCOPE} .vertical-slide {
-  flex: 0 0 var(--vertical-scroll-slide-height, 100vh) !important;
-  min-height: var(--vertical-scroll-slide-height, 100vh) !important;
-  height: var(--vertical-scroll-slide-height, 100vh) !important;
+  flex: 0 0 auto !important;
   width: 100% !important;
 }
 `;
@@ -123,7 +118,8 @@ ${BASE_SCOPE} .vertical-slide {
         return;
       }
 
-      const slideHeight = dataset.scrollSlideHeight || "100vh";
+      const declaredSlideHeight = dataset.scrollSlideHeight || "";
+      const hasFixedSlideHeight = Boolean(declaredSlideHeight);
       const ease = dataset.scrollEase || "power2.out";
       const duration = normalizeDuration(dataset.scrollDuration, 0.85);
       const loopSlides = dataset.scrollLoop === "true";
@@ -137,11 +133,8 @@ ${BASE_SCOPE} .vertical-slide {
         scope.style.setProperty("overflow-y", "hidden", "important");
         scope.style.setProperty("overflow-x", "hidden", "important");
         scope.style.setProperty("overflow", "hidden", "important");
-        scope.style.setProperty("height", slideHeight, "important");
-        scope.style.setProperty("max-height", slideHeight, "important");
         scope.style.setProperty("width", "100%", "important");
         scope.style.setProperty("max-width", "100%", "important");
-        scope.style.setProperty("--vertical-scroll-slide-height", slideHeight);
         scope.style.setProperty("position", "relative", "important");
         scope.style.setProperty("display", "block", "important");
         scope.style.setProperty("touch-action", "none", "important");
@@ -162,11 +155,9 @@ ${BASE_SCOPE} .vertical-slide {
         track.style.setProperty("top", "0", "important");
         track.style.setProperty("left", "0", "important");
         track.style.setProperty("right", "0", "important");
-        track.style.setProperty("bottom", "0", "important");
         track.style.setProperty("display", "flex", "important");
         track.style.setProperty("flex-direction", "column", "important");
         track.style.setProperty("width", "100%", "important");
-        track.style.setProperty("height", "100%", "important");
         track.style.setProperty("padding", "0", "important");
         track.style.setProperty("margin", "0", "important");
         track.style.setProperty("gap", "0", "important");
@@ -189,13 +180,70 @@ ${BASE_SCOPE} .vertical-slide {
       trackWatcher.observe(track, { attributes: true, attributeFilter: ["style"] });
 
       slides.forEach((slide) => {
-        slide.style.setProperty("flex", `0 0 ${slideHeight}`, "important");
-        slide.style.setProperty("min-height", slideHeight, "important");
-        slide.style.setProperty("height", slideHeight, "important");
+        slide.style.setProperty("flex", "0 0 auto", "important");
         slide.style.setProperty("width", "100%", "important");
+        if (hasFixedSlideHeight && declaredSlideHeight) {
+          slide.style.setProperty("min-height", declaredSlideHeight, "important");
+          slide.style.setProperty("height", declaredSlideHeight, "important");
+        }
       });
 
+      let slideOffsets = [];
+      let trackHeightPx = 0;
+      let metricsDirty = true;
+
+      function markMetricsDirty() {
+        metricsDirty = true;
+      }
+
+      function measureSlides() {
+        metricsDirty = false;
+        let running = 0;
+        slideOffsets = [];
+        slides.forEach((slide, index) => {
+          const rect = slide.getBoundingClientRect();
+          const height = rect.height || slide.offsetHeight || 0;
+          slideOffsets[index] = running;
+          running += height;
+        });
+        const scopeHeight = scope.getBoundingClientRect().height || scope.offsetHeight || 0;
+        if (!running) running = scopeHeight;
+        trackHeightPx = Math.max(running, scopeHeight);
+        if (Number.isFinite(trackHeightPx)) {
+          track.style.setProperty("height", `${trackHeightPx}px`, "important");
+          track.style.setProperty("min-height", `${trackHeightPx}px`, "important");
+        }
+      }
+
+      function ensureMetrics() {
+        if (metricsDirty) {
+          measureSlides();
+        }
+      }
+
+      function getTargetOffset(index) {
+        ensureMetrics();
+        return slideOffsets[index] || 0;
+      }
+
       let activeIndex = clampIndex(dataset.scrollStartIndex, slides.length - 1);
+      const slideResizeObserver =
+        "ResizeObserver" in window
+          ? new ResizeObserver(() => {
+              markMetricsDirty();
+              ensureMetrics();
+              gsap.set(track, { y: -getTargetOffset(activeIndex) });
+            })
+          : null;
+      if (slideResizeObserver) {
+        slides.forEach((slide) => slideResizeObserver.observe(slide));
+      } else {
+        window.addEventListener("load", () => {
+          markMetricsDirty();
+          ensureMetrics();
+          gsap.set(track, { y: -getTargetOffset(activeIndex) });
+        });
+      }
       let pendingTween = null;
       let isAnimating = false;
       let isHovered = false;
@@ -255,8 +303,10 @@ ${BASE_SCOPE} .vertical-slide {
 
       function setImmediate(index) {
         const target = indexToUse(index);
+        ensureMetrics();
+        const offset = getTargetOffset(target);
         activeIndex = target;
-        gsap.set(track, { yPercent: -100 * target });
+        gsap.set(track, { y: -offset });
         updateActiveState();
         emitChange();
       }
@@ -268,7 +318,9 @@ ${BASE_SCOPE} .vertical-slide {
         if (target === activeIndex && !immediate) return false;
         clearAutoplay();
 
+        ensureMetrics();
         const distance = Math.abs(target - activeIndex) || 1;
+        const targetOffset = getTargetOffset(target);
         activeIndex = target;
         updateActiveState();
 
@@ -278,7 +330,7 @@ ${BASE_SCOPE} .vertical-slide {
         }
 
         if (immediate || duration === 0) {
-          gsap.set(track, { yPercent: -100 * target });
+          gsap.set(track, { y: -targetOffset });
           emitChange();
           isAnimating = false;
           return true;
@@ -286,7 +338,7 @@ ${BASE_SCOPE} .vertical-slide {
 
         isAnimating = true;
         pendingTween = gsap.to(track, {
-          yPercent: -100 * target,
+          y: -targetOffset,
           duration: Math.min(duration * distance, duration * 1.5),
           ease,
           onComplete: () => {
@@ -503,7 +555,9 @@ ${BASE_SCOPE} .vertical-slide {
       if (keysEnabled) scope.addEventListener("keydown", handleKeydown);
 
       window.addEventListener("resize", () => {
-        gsap.set(track, { yPercent: -100 * activeIndex });
+        markMetricsDirty();
+        ensureMetrics();
+        gsap.set(track, { y: -getTargetOffset(activeIndex) });
       });
 
       setImmediate(activeIndex);
