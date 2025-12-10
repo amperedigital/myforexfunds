@@ -209,6 +209,7 @@
 
         requestAnimationFrame(() => {
           const { openSlides } = collectCardState();
+          console.log("[hero-slider] RAf open slides", openSlides.length);
           if (openSlides.length === 1 && openSlides[0] === activeSlide) {
             console.log("[hero-slider] only active slide open, skipping auto-close");
             syncPlaybackState("only-slide-open");
