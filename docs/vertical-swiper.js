@@ -38,11 +38,21 @@
         },
       });
 
+      const startDelay = Number(el.dataset.startDelay) || 0;
+      if (startDelay > 0 && swiper.autoplay) {
+        swiper.autoplay.stop();
+        setTimeout(() => {
+          if (swiper && swiper.autoplay) swiper.autoplay.start();
+        }, startDelay);
+      }
+
       if (el.dataset.lockScroll !== 'false') {
         el.addEventListener('wheel', (evt) => {
           if (evt.cancelable) evt.preventDefault();
         }, { passive: false });
       }
+
+      el.__heroSwiperInstance = swiper;
     });
   }
 
