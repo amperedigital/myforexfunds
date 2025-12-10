@@ -162,6 +162,7 @@
         collectOpenSlides()
           .filter((slide) => !exceptSlide || slide !== exceptSlide)
           .forEach((slide) => {
+            if (!slideLooksOpen(slide)) return;
             const footer = slide.querySelector(footerSelector);
             if (!footer) return;
             const trigger =
