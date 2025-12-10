@@ -16,7 +16,35 @@
 
   const managedSliders = new WeakSet();
   const sliderObservers = new WeakMap();
-  const closingSlides = new WeakSet();
+  const closingSlides = new WeakMap();
+
+  function stopMonitoringClose(slide) {
+    if (!closingSlides.has(slide)) return;
+    const rafId = closingSlides.get(slide);
+    if (typeof rafId === "number") {
+      cancelAnimationFrame(rafId);
+    }
+    closingSlides.delete(slide);
+  }
+
+  function monitorClosing(slide) {
+    if (!slide || closingSlides.has(slide)) return;
+    const tick = () => {
+      if (!document.body.contains(slide)) {
+        stopMonitoringClose(slide);
+        return;
+      }
+      const panel = slide.querySelector(panelSelector);
+      if (!looksOpen(panel)) {
+        stopMonitoringClose(slide);
+        return;
+      }
+      const rafId = requestAnimationFrame(tick);
+      closingSlides.set(slide, rafId);
+    };
+    const rafId = requestAnimationFrame(tick);
+    closingSlides.set(slide, rafId);
+  }
 
   function looksOpen(panel) {
     if (!panel) return false;
@@ -63,9 +91,8 @@
     if (!footer) return false;
     let trigger = footer.querySelector("button, [role='button'], [data-w-id], [data-trigger='card-footer']");
     if (!trigger) trigger = footer;
-    closingSlides.add(slide);
     trigger.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-    requestAnimationFrame(() => closingSlides.delete(slide));
+    monitorClosing(slide);
     return true;
   }
 
