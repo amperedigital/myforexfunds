@@ -23,6 +23,8 @@
 
     const inlineHeight = parseFloat(panel.style.height || panel.style.maxHeight || "0");
     if (!Number.isNaN(inlineHeight) && inlineHeight > 4) return true;
+    const inlineWidth = parseFloat(panel.style.width || panel.style.maxWidth || "0");
+    if (!Number.isNaN(inlineWidth) && inlineWidth > 4) return true;
     const rect = panel.getBoundingClientRect();
     return rect.height > 4;
   }
