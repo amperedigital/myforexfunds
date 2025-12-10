@@ -1,0 +1,297 @@
+<style>
+
+
+.horizon-glow {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60vh;
+    background: linear-gradient(0deg, #020923 20%, rgba(2, 9, 35, 0.8) 60%, rgba(2, 9, 35, 0) 100%);
+    z-index: -1;
+    pointer-events: none;
+
+}
+.vertical-line {
+    width: 1px;
+    margin: 0 auto;
+    display: block;
+}
+
+.line-top {
+    height: 56px;
+    background: linear-gradient(to top, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+    margin-bottom: 24px;
+}
+
+.line-bottom {
+    height: 72px;
+    background: linear-gradient(to bottom, #FFFFFF 0%, rgba(255, 255, 255, 0) 100%);
+    margin-top: 40px;
+}
+
+
+
+
+
+.section-timeline {
+    width: 100%;
+    position: relative;
+    z-index: 20;
+    padding-bottom: 60px;
+}
+
+.timeline-wrapper {
+    width: 100%;
+    position: relative;
+}
+
+.timeline-line {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        #78D724 0%, 
+        #78D724 43.75%, 
+        #FE8027 56.25%, 
+        #C40000 68.27%, 
+        #C40000 100%
+    );
+    position: absolute;
+    bottom: 35px; 
+    left: 0;
+    z-index: 1;
+    mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.timeline-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end; 
+    position: relative;
+    z-index: 2;
+    gap: 10px;
+    overflow-x: auto; 
+    padding-bottom: 10px; 
+    padding-top: 300px; 
+    margin-top: -260px; 
+    scrollbar-width: none;
+}
+
+.timeline-container::-webkit-scrollbar {
+    display: none;
+}
+
+.timeline-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 160px; 
+    flex: 1;
+    position: relative;
+    padding-bottom: 20px; 
+    overflow: visible;
+}
+
+.status-box {
+    width: 143px;
+    height: 47px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    margin-bottom: 25px; 
+    padding: 5px 10px;
+    backdrop-filter: blur(8.25px);
+    transition: transform 0.3s;
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+}
+
+.status-box:hover {
+    transform: translateY(-5px);
+    z-index: 100;
+}
+
+.status-text {
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.2;
+    color: #fff;
+    font-weight: 400;
+    z-index: 2;
+}
+
+.tooltip {
+    position: absolute;
+    bottom: 130%; 
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    width: 220px;
+    background: rgba(2, 9, 35, 0.95);
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    pointer-events: none;
+    z-index: 9999;
+line-height: 1}
+
+.tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -6px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: rgba(2, 9, 35, 0.95) transparent transparent transparent;
+}
+
+.status-box:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.tooltip-date {
+    display: block;
+    font-size: 10px;
+    color: #78D724; 
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.status-orange:hover .tooltip .tooltip-date { color: #FE8027; }
+.status-red:hover .tooltip .tooltip-date { color: #C40000; }
+
+.tooltip-desc {
+    font-size: 11px;
+    color: #ddd;
+   
+}
+
+.status-green {
+    background: linear-gradient(180deg, rgba(120, 215, 36, 0.37) 0%, rgba(55, 102, 14, 0.27) 100%);
+    border: 1px solid rgba(120, 215, 36, 0.5); 
+}
+.status-orange {
+    background: linear-gradient(180deg, rgba(254, 128, 39, 0.37) 0%, rgba(112, 52, 10, 0.31) 100%);
+    border: 1px solid rgba(254, 128, 39, 0.5); 
+}
+.status-red {
+    background: linear-gradient(180deg, rgba(196, 0, 0, 0.37) 0%, rgba(66, 0, 0, 0.19) 100%);
+    border: 1px solid rgba(196, 0, 0, 0.5); 
+}
+
+.dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    z-index: 3;
+    position: absolute;
+    bottom: 20px; 
+}
+.dot-green { background: #78D724; }
+.dot-orange { background: #FE8027; }
+.dot-red { background: #C40000; }
+
+
+@media (max-width: 768px) {
+
+    .timeline-container {
+        justify-content: flex-start;
+        padding-left: 20px;
+        padding-right: 20px;
+        overflow-x: auto;
+    }
+    .timeline-item {
+        min-width: 150px;
+    }
+    .tooltip {
+        width: 180px;
+        font-size: 10px;
+    }
+}
+</style>
+
+<div class="section-timeline">
+        <div class="timeline-wrapper">
+            <div class="container" style="position: relative;">
+                <div class="timeline-line"></div>
+                
+                <div class="timeline-container">
+                    <div class="timeline-item">
+                        <div class="status-box status-green">
+                            <span class="status-text">US Case Victory</span>
+                            <div class="tooltip">
+                                <span class="tooltip-date">Completed: May 2025</span>
+                                <span class="tooltip-desc">Dismissal of all allegations in the United States.</span>
+                            </div>
+                        </div>
+                        <div class="dot dot-green"></div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="status-box status-green">
+                            <span class="status-text">Unwinding Canadian Receivership</span>
+                            <div class="tooltip">
+                                <span class="tooltip-date">Completed: August 2025</span>
+                                <span class="tooltip-desc">Directed by Canadian Court</span>
+                            </div>
+                        </div>
+                        <div class="dot dot-green"></div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="status-box status-green">
+                            <span class="status-text">Return of Canadian Assets</span>
+                            <div class="tooltip">
+                                <span class="tooltip-date">Completed: December 2025</span>
+                                <span class="tooltip-desc">Final Court Order</span>
+                            </div>
+                        </div>
+                        <div class="dot dot-green"></div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="status-box status-orange">
+                            <span class="status-text">Access to Systems &amp; Data</span>
+                            <div class="tooltip">
+                                <span class="tooltip-date">Expected: Early Dec 2025</span>
+                                <span class="tooltip-desc">Regain access to our systems and missing data.</span>
+                            </div>
+                        </div>
+                        <div class="dot dot-orange"></div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="status-box status-red">
+                            <span class="status-text">Analyze Data</span>
+                            <div class="tooltip">
+                                <span class="tooltip-date">Expected: Dec 2025 - Jan 2026</span>
+                                <span class="tooltip-desc">Reassemble MFF’s awesome team to analyze all systems and customer data.</span>
+                            </div>
+                        </div>
+                        <div class="dot dot-red"></div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <div class="status-box status-red">
+                            <span class="status-text">Open Support Channels</span>
+                            <div class="tooltip">
+                                <span class="tooltip-date">Expected: Jan - Feb 2026</span>
+                                <span class="tooltip-desc">Start communicating with the MFF traders and Prop Family.</span>
+                            </div>
+                        </div>
+                        <div class="dot dot-red"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
