@@ -72,7 +72,9 @@
       const slides = Array.from(track.querySelectorAll(slideSelector));
       if (slides.length < 2) return;
 
-      if (prefersReduce) {
+      const respectMotionPreference = dataset.scrollRespectMotion !== "false";
+
+      if (prefersReduce && respectMotionPreference) {
         scope.style.overflowY = scope.style.overflowY || "auto";
         return;
       }
