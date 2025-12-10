@@ -209,7 +209,11 @@
         });
         if (wasOpen) {
           console.log("[hero-slider] slide was already open, letting Webflow close it");
-          requestAnimationFrame(() => syncPlaybackState("footer-close"));
+          suppressFooterChain = true;
+          requestAnimationFrame(() => {
+            suppressFooterChain = false;
+            syncPlaybackState("footer-close");
+          });
           return;
         }
         freezeSwiper();
