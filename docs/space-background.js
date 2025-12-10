@@ -261,11 +261,16 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
     const videoContext = setupVideo(el) || {};
     const videoHost = videoContext.host || null;
     const videoEl = videoContext.video || null;
+    const videoRestartEnabled = parseBooleanAttribute(
+      el,
+      "data-space-bg-video-restart",
+      true
+    );
     let lastVideoRestartWidth = typeof window !== "undefined" ? window.innerWidth : 0;
     const VIDEO_RESTART_WIDTH_THRESHOLD = 24;
 
     function restartVideoPlayback() {
-      if (!videoEl) return;
+      if (!videoEl || !videoRestartEnabled) return;
       try {
         videoEl.dataset.spaceVideoRevealed = "";
         videoEl.style.opacity = "0";
@@ -888,10 +893,12 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
         if (Math.abs(w - widthAtLastInit) >= 1) {
           init();
         }
-        const currentWidth = typeof window !== "undefined" ? window.innerWidth : widthAtLastInit;
-        if (Math.abs(currentWidth - lastVideoRestartWidth) >= VIDEO_RESTART_WIDTH_THRESHOLD) {
-          lastVideoRestartWidth = currentWidth;
-          restartVideoPlayback();
+        if (videoRestartEnabled) {
+          const currentWidth = typeof window !== "undefined" ? window.innerWidth : widthAtLastInit;
+          if (Math.abs(currentWidth - lastVideoRestartWidth) >= VIDEO_RESTART_WIDTH_THRESHOLD) {
+            lastVideoRestartWidth = currentWidth;
+            restartVideoPlayback();
+          }
         }
       }, 200);
     });
@@ -912,13 +919,13 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
       const handleVisibilityChange = () => {
         if (document.hidden) {
           pauseVideoPlayback();
-        } else {
+        } else if (videoRestartEnabled) {
           restartVideoPlayback();
         }
       };
       document.addEventListener("visibilitychange", handleVisibilityChange);
       window.addEventListener("pageshow", (event) => {
-        if (event.persisted) {
+        if (event.persisted && videoRestartEnabled) {
           restartVideoPlayback();
         }
       });
