@@ -701,7 +701,9 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
       if (anomaly) return;
       if (Math.random() < 0.002) {
         const startX = Math.random() * w * 0.6 + w * 0.2;
-        const startY = Math.random() * h * 0.6 + h * 0.2;
+        const maxY = h * 0.75;
+        const minY = h * 0.05;
+        const startY = Math.random() * (maxY - minY) + minY;
         const angle = Math.random() * Math.PI * 2;
         const len = rand(80, 140);
         const life = rand(600, 1200); // ms
@@ -727,6 +729,11 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
       }
       anomaly.x += anomaly.dx * 16;
       anomaly.y += anomaly.dy * 16;
+      const maxY = h * 0.75;
+      if (anomaly.y > maxY) {
+        anomaly = null;
+        return;
+      }
       starCtx.save();
       starCtx.globalAlpha = anomaly.alpha * Math.max(0, remaining / 1200);
       starCtx.strokeStyle = "rgba(180,220,255,0.9)";
