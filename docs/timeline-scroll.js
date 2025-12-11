@@ -42,6 +42,7 @@
 
     var pointerActive = false;
     var pointerTapMode = false;
+    var lastPointerWasTouch = deviceHasTouch;
     var dragging = false;
     var startX = 0;
     var startY = 0;
@@ -140,6 +141,11 @@
 
     function pointerDown(event) {
       if (event.pointerType === 'mouse' && event.button !== 0) return;
+      if (event.pointerType === 'touch') {
+        lastPointerWasTouch = true;
+      } else if (event.pointerType === 'mouse') {
+        lastPointerWasTouch = false;
+      }
       pointerActive = true;
       dragging = false;
       tapMoved = false;
@@ -185,6 +191,21 @@
       }
     }
 
+    function resolveStatusBoxFromEvent(event) {
+      var target = event.target;
+      while (target && target.nodeType !== 1) {
+        target = target.parentElement;
+      }
+      if (!target) return null;
+      var withinBox = target.closest('.status-box');
+      if (withinBox) return withinBox;
+      var openBox = wrapper.querySelector('.status-box.is-tooltip-open');
+      if (openBox && openBox.contains(target)) {
+        return openBox;
+      }
+      return null;
+    }
+
     function handleTap(event) {
       if (!pointerTapMode) {
         tapCandidate = null;
@@ -197,7 +218,7 @@
         tapMoved ||
         Math.abs(event.clientX - startX) > TAP_SLOP ||
         Math.abs(event.clientY - startY) > TAP_SLOP;
-      var statusEl = tapCandidate || event.target.closest('.status-box');
+      var statusEl = tapCandidate || resolveStatusBoxFromEvent(event);
       if (!moved && statusEl) {
         if (statusEl.classList.contains('is-tooltip-open')) {
           statusEl.classList.remove('is-tooltip-open');
@@ -248,6 +269,23 @@
       }
     }
 
+    function handleClick(event) {
+      if (!lastPointerWasTouch && !pointerTapMode && !deviceHasTouch) return;
+      if (wrapper.classList.contains('is-dragging')) return;
+      var statusEl = resolveStatusBoxFromEvent(event);
+      if (statusEl) {
+        event.preventDefault();
+        if (statusEl.classList.contains('is-tooltip-open')) {
+          statusEl.classList.remove('is-tooltip-open');
+        } else {
+          closeAllTooltips(statusEl);
+          statusEl.classList.add('is-tooltip-open');
+        }
+      } else if (!event.target.closest('.timeline-container')) {
+        closeAllTooltips();
+      }
+    }
+
     function handleWheel(event) {
       if (!canScroll) return;
       closeAllTooltips();
@@ -270,6 +308,7 @@
       releasePointer(event, false);
     });
     wrapper.addEventListener('wheel', handleWheel, { passive: false });
+    wrapper.addEventListener('click', handleClick, true);
 
     if (window.ResizeObserver) {
       var resizeObserver = new ResizeObserver(computeBounds);
