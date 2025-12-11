@@ -1,6 +1,6 @@
 window.addEventListener("DOMContentLoaded", () => {
   const targets = Array.from(document.querySelectorAll("[data-space-bg]")).filter(
-    (el) => el.closest("[data-space-bg]") === el
+    (el) => !(el.parentElement && el.parentElement.closest("[data-space-bg]"))
   );
   if (!targets.length) return;
 
