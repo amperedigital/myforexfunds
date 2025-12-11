@@ -708,11 +708,13 @@ a[href*="unicorn.studio"]{display:none!important;opacity:0!important;pointer-eve
         const len = rand(80, 140);
         const life = rand(600, 1200); // ms
         const speed = rand(0.3, 0.7);
+        const dx = Math.cos(angle) * speed;
+        const dy = -Math.abs(Math.sin(angle) * speed);
         anomaly = {
           x: startX,
           y: startY,
-          dx: Math.cos(angle) * speed,
-          dy: Math.sin(angle) * speed,
+          dx,
+          dy,
           len,
           endTime: performance.now() + life,
           alpha: 0.5 + Math.random() * 0.4
