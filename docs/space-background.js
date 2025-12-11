@@ -60,8 +60,12 @@ window.addEventListener("DOMContentLoaded", () => {
   let dustMotionBoost = isMobileViewport() ? 3 : 1;
   function parseBooleanAttribute(el, attr, fallback) {
     if (!el.hasAttribute(attr)) return fallback;
-    const value = el.getAttribute(attr);
-    return value !== "false";
+    const raw = (el.getAttribute(attr) || "").trim().toLowerCase();
+    if (!raw) return true;
+    if (raw === "false" || raw === "0" || raw === "no" || raw === "off") {
+      return false;
+    }
+    return true;
   }
   function parseNumberAttribute(el, attr, fallback) {
     if (!el.hasAttribute(attr)) return fallback;
@@ -73,6 +77,17 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const floatVal = parseFloat(raw);
     return Number.isFinite(floatVal) ? floatVal : fallback;
+  }
+  function parseNumberAttributeAny(el, names, fallback) {
+    if (!Array.isArray(names)) {
+      names = [names];
+    }
+    for (const name of names) {
+      if (el.hasAttribute(name)) {
+        return parseNumberAttribute(el, name, fallback);
+      }
+    }
+    return fallback;
   }
   function clamp01(value) {
     return Math.min(1, Math.max(0, value));
@@ -186,7 +201,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const starSafeRight = clamp01(
       parseNumberAttribute(el, "data-space-bg-stars-safe-right", 0.9)
     );
-    const starSafeTop = clamp01(parseNumberAttribute(el, "data-space-bg-stars-safe-top", 0));
+    const starSafeTop = clamp01(
+      parseNumberAttributeAny(el, ["data-space-bg-stars-safe-top", "data-sapce-bg-stars-safe-top"], 0)
+    );
     const starSafeBottom = clamp01(
       parseNumberAttribute(el, "data-space-bg-stars-safe-bottom", 0.25)
     );
