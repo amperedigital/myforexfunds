@@ -119,7 +119,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     const staleLayers = wrapper.querySelectorAll(".space-layer");
     staleLayers.forEach((layer) => layer.remove());
-
     let host = wrapper.querySelector(".space-video-mask-host");
     if (!host) {
       host = document.createElement("div");
