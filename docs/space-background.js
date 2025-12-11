@@ -1,5 +1,7 @@
 window.addEventListener("DOMContentLoaded", () => {
-  const targets = document.querySelectorAll("[data-space-bg]");
+  const targets = Array.from(document.querySelectorAll("[data-space-bg]")).filter(
+    (el) => el.closest("[data-space-bg]") === el
+  );
   if (!targets.length) return;
 
   const UNICORN_SCRIPT =
