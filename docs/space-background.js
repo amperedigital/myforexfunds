@@ -117,6 +117,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (slot && wrapper.parentElement !== slot) {
       slot.appendChild(wrapper);
     }
+    const staleLayers = wrapper.querySelectorAll(".space-layer");
+    staleLayers.forEach((layer) => layer.remove());
 
     let host = wrapper.querySelector(".space-video-mask-host");
     if (!host) {
