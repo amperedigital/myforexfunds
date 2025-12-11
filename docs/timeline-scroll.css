@@ -1,14 +1,32 @@
 .section-timeline {
   position: relative;
+  isolation: isolate;
 }
 
 .section-timeline .timeline-wrapper {
   width: 100%;
   position: relative;
-  overflow-x: auto;
+  overflow-x: visible;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   cursor: grab;
+  touch-action: pan-y;
+  --timeline-bleed-y: 12rem;
+  --timeline-bleed-x: 6rem;
+  --timeline-bleed-bottom: 0rem;
+  clip-path: inset(
+    calc(-1 * var(--timeline-bleed-y))
+    calc(-1 * var(--timeline-bleed-x))
+    var(--timeline-bleed-bottom)
+    calc(-1 * var(--timeline-bleed-x))
+  );
+  -webkit-clip-path: inset(
+    calc(-1 * var(--timeline-bleed-y))
+    calc(-1 * var(--timeline-bleed-x))
+    var(--timeline-bleed-bottom)
+    calc(-1 * var(--timeline-bleed-x))
+  );
 }
 
 .section-timeline .timeline-wrapper::-webkit-scrollbar {
@@ -17,59 +35,72 @@
 
 .section-timeline .timeline-wrapper.is-dragging {
   cursor: grabbing;
+  user-select: none;
+  z-index: 2;
+}
+
+.section-timeline .timeline-wrapper.is-dragging .tooltip {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translateX(-50%) translateY(10px) !important;
+}
+
+.section-timeline .timeline-wrapper.is-dragging *,
+.section-timeline .timeline-wrapper.is-dragging *::before,
+.section-timeline .timeline-wrapper.is-dragging *::after {
+  user-select: none !important;
+}
+
+.section-timeline .timeline-wrapper.is-dragging .tooltip {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translateX(-50%) translateY(10px) !important;
+}
+
+.section-timeline .status-box .tooltip {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.section-timeline .status-box:hover .tooltip,
+.section-timeline .status-box.is-tooltip-open .tooltip {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateX(-50%) translateY(0) !important;
+  pointer-events: auto;
+}
+
+.section-timeline .status-orange.is-tooltip-open .tooltip .tooltip-date {
+  color: #fe8027 !important;
+}
+
+.section-timeline .status-red.is-tooltip-open .tooltip .tooltip-date {
+  color: #c40000 !important;
 }
 
 .section-timeline .timeline-container {
   position: relative;
   display: flex;
   align-items: flex-end;
-  gap: 1.5rem;
+  gap: 1rem;
   min-width: max-content;
   padding-bottom: 2rem;
+  overflow: visible !important;
+  z-index: 2;
+  will-change: transform;
 }
 
 .section-timeline .timeline-line {
   position: absolute;
-  bottom: 35px;
   left: 0;
-  height: 1px;
-  background: currentColor;
+  bottom: 55px;
+  width: 100%;
   pointer-events: none;
-}
-
-@media (max-width: 1024px) {
-  .section-timeline .timeline-wrapper {
-    padding-bottom: 1.5rem;
-  }
-
-  .section-timeline .timeline-container {
-    flex-wrap: nowrap;
-    padding-inline: 1.25rem;
-    scroll-snap-type: x proximity;
-  }
-
-  .section-timeline .timeline-item {
-    flex: 0 0 220px;
-    scroll-snap-align: center;
-  }
-}
-
-@media (max-width: 600px) {
-  .section-timeline .timeline-item {
-    flex-basis: 180px;
-  }
-}
-.section-timeline .timeline-container {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  gap: 1.5rem;
-  min-width: max-content;
-  padding-bottom: 2rem;
-}
-
-.section-timeline .timeline-line {
-  pointer-events: none;
+  will-change: transform, width;
+  z-index: 1;
 }
 
 @media (max-width: 1024px) {
