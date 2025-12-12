@@ -370,30 +370,46 @@
 
     var enableScrollResume = scrollStable && isLikelyMobileViewport();
     if (enableScrollResume) {
-      var resumeIfBuffered = function(eventType) {
+      var pendingWakeResume = false;
+      var resumeFromWake = function(forcePlay) {
+        if (!elementIsInViewport(player, 0.05)) return;
+        if (!video.paused || video.ended) {
+          pendingWakeResume = false;
+          return;
+        }
+        if (lastPauseBy === 'manual') {
+          pendingWakeResume = false;
+          return;
+        }
+        if (!forcePlay && !hasBufferedAhead(video, 0.5)) return;
+        if ((isLazyTrue || isLazyMeta) && !isAttached) attachMediaOnce();
+        setStatus('loading');
+        safePlay(video, true);
+        pendingWakeResume = false;
+      };
+
+      subscribeMobileResumeEvents(function(eventType) {
         if (eventType === 'visibility' && document.visibilityState === 'hidden') {
+          pendingWakeResume = true;
           if (!video.paused && !video.ended) {
             lastPauseBy = lastPauseBy || 'io';
             video.pause();
           }
           return;
         }
-        if (!elementIsInViewport(player, 0.05)) return;
-        if (!video.paused || video.ended) return;
-        if (lastPauseBy === 'manual') return;
-        if (!hasBufferedAhead(video, 0.5)) return;
-        if ((isLazyTrue || isLazyMeta) && !isAttached) attachMediaOnce();
-        setStatus('loading');
-        safePlay(video, true);
-      };
 
-      subscribeMobileResumeEvents(function(eventType) {
-        resumeIfBuffered(eventType);
+        var force =
+          eventType === 'visibility' ||
+          eventType === 'focus' ||
+          eventType === 'pageshow' ||
+          pendingWakeResume;
+
+        resumeFromWake(force);
       });
 
       player.addEventListener('pause', function() {
         if (!video.ended && lastPauseBy !== 'manual') {
-          resumeIfBuffered('pause');
+          resumeFromWake(pendingWakeResume);
         }
       });
     }
@@ -584,6 +600,9 @@ function subscribeMobileResumeEvents(callback) {
     });
     window.addEventListener('focus', function() {
       fireMobileResumeEvents('focus');
+    });
+    window.addEventListener('pageshow', function() {
+      fireMobileResumeEvents('pageshow');
     });
   }
   return function unsubscribe() {
