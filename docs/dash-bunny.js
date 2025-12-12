@@ -381,7 +381,6 @@
           pendingWakeResume = false;
           return;
         }
-        if (!forcePlay && !hasBufferedAhead(video, 0.5)) return;
         if ((isLazyTrue || isLazyMeta) && !isAttached) attachMediaOnce();
         setStatus('loading');
         safePlay(video, true);
@@ -409,7 +408,7 @@
 
       player.addEventListener('pause', function() {
         if (!video.ended && lastPauseBy !== 'manual') {
-          resumeFromWake(pendingWakeResume);
+          resumeFromWake(true);
         }
       });
     }

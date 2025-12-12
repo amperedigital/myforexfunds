@@ -44,4 +44,5 @@
   * Manual pauses are respected; resume only fires if the user didn’t explicitly pause.
   * Adds helper utilities (`subscribeMobileResumeEvents`, `hasBufferedAhead`, `isLikelyMobileViewport`) so multiple players can share throttled listeners.
 - Version 1.1.18 further improves wake-from-sleep behavior by forcing a replay attempt after `visibilitychange`, `pageshow`, or the first scroll/touch post-wake even if `readyState` dropped below `HAVE_FUTURE_DATA`. This prevents the hero video from getting “stuck” after the phone sleeps while still honoring manual pauses.
+- Version 1.1.19 removes the buffered-data requirement when auto-resuming, so Safari-paused videos restart on the next scroll/touch even if the browser dumped `readyState`. Manual pauses still block the auto-resume.
 - Landing pages load the dedicated dash-bunny tag from jsDelivr so these changes roll out independently of other assets.
