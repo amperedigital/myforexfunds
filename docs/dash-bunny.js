@@ -367,6 +367,36 @@
         scheduleKickstart();
       }
     }
+
+    var enableScrollResume = scrollStable && isLikelyMobileViewport();
+    if (enableScrollResume) {
+      var resumeIfBuffered = function(eventType) {
+        if (eventType === 'visibility' && document.visibilityState === 'hidden') {
+          if (!video.paused && !video.ended) {
+            lastPauseBy = lastPauseBy || 'io';
+            video.pause();
+          }
+          return;
+        }
+        if (!elementIsInViewport(player, 0.05)) return;
+        if (!video.paused || video.ended) return;
+        if (lastPauseBy === 'manual') return;
+        if (!hasBufferedAhead(video, 0.5)) return;
+        if ((isLazyTrue || isLazyMeta) && !isAttached) attachMediaOnce();
+        setStatus('loading');
+        safePlay(video, true);
+      };
+
+      subscribeMobileResumeEvents(function(eventType) {
+        resumeIfBuffered(eventType);
+      });
+
+      player.addEventListener('pause', function() {
+        if (!video.ended && lastPauseBy !== 'manual') {
+          resumeIfBuffered('pause');
+        }
+      });
+    }
   });
 
   // Helper: Ready status guard
@@ -526,6 +556,75 @@
       }).catch(function(){ resolve({ width:0, height:0, duration:NaN }); });
     });
   }
+}
+
+var mobileResumeSubscribers = [];
+var mobileResumeInitialized = false;
+var mobileScrollRaf = null;
+
+function subscribeMobileResumeEvents(callback) {
+  if (typeof callback !== 'function') return function() {};
+  mobileResumeSubscribers.push(callback);
+  if (!mobileResumeInitialized) {
+    mobileResumeInitialized = true;
+    window.addEventListener('scroll', function() {
+      if (mobileScrollRaf) return;
+      mobileScrollRaf = requestAnimationFrame(function() {
+        mobileScrollRaf = null;
+        fireMobileResumeEvents('scroll');
+      });
+    }, { passive: true });
+    ['touchstart', 'touchend', 'pointerdown', 'pointerup'].forEach(function(eventName) {
+      window.addEventListener(eventName, function() {
+        fireMobileResumeEvents(eventName);
+      }, { passive: true });
+    });
+    document.addEventListener('visibilitychange', function() {
+      fireMobileResumeEvents('visibility');
+    });
+    window.addEventListener('focus', function() {
+      fireMobileResumeEvents('focus');
+    });
+  }
+  return function unsubscribe() {
+    var idx = mobileResumeSubscribers.indexOf(callback);
+    if (idx >= 0) {
+      mobileResumeSubscribers.splice(idx, 1);
+    }
+  };
+}
+
+function fireMobileResumeEvents(type) {
+  if (!mobileResumeSubscribers.length) return;
+  mobileResumeSubscribers.forEach(function(cb) {
+    try { cb(type); } catch (_) {}
+  });
+}
+
+function isLikelyMobileViewport() {
+  if (typeof window === 'undefined') return false;
+  var mq = window.matchMedia && window.matchMedia('(max-width: 1023px)');
+  var maxTouch = (typeof navigator !== 'undefined' && navigator.maxTouchPoints) || 0;
+  var hasTouch = ('ontouchstart' in window) || maxTouch > 0;
+  return (mq && mq.matches) || hasTouch;
+}
+
+function hasBufferedAhead(video, minSeconds) {
+  if (!video) return false;
+  if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) return true;
+  var buffered = video.buffered;
+  if (!buffered || buffered.length === 0) return false;
+  var current = video.currentTime || 0;
+  var threshold = typeof minSeconds === 'number' ? minSeconds : 0.25;
+  for (var i = 0; i < buffered.length; i++) {
+    var start = buffered.start(i);
+    var end = buffered.end(i);
+    if (current >= start && end - current >= threshold) {
+      return true;
+    }
+  }
+  var lastIndex = buffered.length - 1;
+  return lastIndex >= 0 && buffered.end(lastIndex) - current >= threshold;
 }
 
   function bootPlayers() {
